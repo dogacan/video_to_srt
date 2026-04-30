@@ -14,8 +14,9 @@ public protocol TranscriptionEngine {
     /// Transcribe the given audio or video file to SRT format.
     /// - Parameters:
     ///   - fileURL: The file URL pointing to the local video or audio file.
-    ///   - options: Engine-agnostic options such as locale. Defaults to ``TranscriptionOptions.default``.
-    /// - Returns: An async stream yielding transcription chunks and progress.
+    ///   - options: Engine-agnostic options such as locale and subtitle offset.
+    /// - Returns: An `AsyncThrowingStream` yielding ``TranscriptionResult`` chunks as they become available.
+    /// - Throws: An error if transcription fails, if the input file is inaccessible, or if required resources (like models) are missing.
     func transcribe(fileURL: URL, options: TranscriptionOptions) -> AsyncThrowingStream<TranscriptionResult, Error>
 }
 
