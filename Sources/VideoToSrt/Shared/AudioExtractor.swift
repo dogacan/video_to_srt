@@ -249,6 +249,18 @@ public struct AudioExtractor {
         }
     }
 
+    private static func validateFFmpegPath(_ path: String) throws {
+        let fileManager = FileManager.default
+        var isDirectory: ObjCBool = false
+        guard fileManager.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue else {
+            throw AudioExtractionError.audioExportFailed("FFmpeg path '\(path)' is not a file.")
+        }
+        
+        guard fileManager.isExecutableFile(atPath: path) else {
+            throw AudioExtractionError.audioExportFailed("FFmpeg path '\(path)' is not executable.")
+        }
+    }
+
     private static func isUnsupportedFormat(_ ext: String) -> Bool {
         unsupportedFormats.contains(ext)
     }
@@ -258,10 +270,12 @@ public struct AudioExtractor {
         guard let ffmpeg = ffmpegPath else {
             throw AudioExtractionError.unsupportedMediaFormat(ext)
         }
+        try validateFFmpegPath(ffmpeg)
         return try runFFmpeg(from: sourceURL, ffmpegPath: ffmpeg, codec: "copy")
     }
 
     private static func runFFmpeg(from sourceURL: URL, ffmpegPath: String, codec: String) throws -> URL {
+        try validateFFmpegPath(ffmpegPath)
         let tempDir = FileManager.default.temporaryDirectory
         let ext = (codec == "copy") ? "mp4" : "m4a"
         let outputURL = tempDir.appendingPathComponent("video_to_srt_\(UUID().uuidString).\(ext)")
@@ -271,6 +285,7 @@ public struct AudioExtractor {
     }
     
     private static func runFFmpegTo16kHzWav(from sourceURL: URL, ffmpegPath: String) throws -> URL {
+        try validateFFmpegPath(ffmpegPath)
         let tempDir = FileManager.default.temporaryDirectory
         let outputURL = tempDir.appendingPathComponent("video_to_srt_\(UUID().uuidString).wav")
 
