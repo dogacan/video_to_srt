@@ -10,7 +10,6 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
-        .package(url: "https://github.com/exPHAT/SwiftWhisper.git", from: "1.2.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -19,8 +18,17 @@ let package = Package(
             name: "VideoToSrt",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
-                .product(name: "SwiftWhisper", package: "SwiftWhisper")
+                "WhisperCore"
             ]
+        ),
+        .target(
+            name: "WhisperCore",
+            dependencies: ["whisper"]
+        ),
+        .binaryTarget(
+            name: "whisper",
+            url: "https://github.com/ggml-org/whisper.cpp/releases/download/v1.8.4/whisper-v1.8.4-xcframework.zip",
+            checksum: "1c7a93bd20fe4e57e0af12051ddb34b7a434dfc9acc02c8313393150b6d1821f"
         ),
         .testTarget(
             name: "VideoToSrtTests",

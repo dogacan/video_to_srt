@@ -127,7 +127,7 @@ public struct AppleTranscriptionEngine: TranscriptionEngine, Sendable {
             }()
 
             // 7. Process results with segmenter
-            var segmenter = ResultSegmenter(
+            let segmenter = ResultSegmenter(
                 offset: options.subtitleOffsetSeconds,
                 totalDuration: totalDuration
             )

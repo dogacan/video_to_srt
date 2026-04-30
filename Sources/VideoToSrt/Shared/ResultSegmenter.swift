@@ -8,7 +8,7 @@ public protocol TranscriptionSegment {
 }
 
 /// Internal helper to accumulate transcription results into SRT-friendly segments.
-public struct ResultSegmenter {
+public class ResultSegmenter: @unchecked Sendable {
     private let offset: Double
     private let totalDuration: Double
     private let maxSegmentDuration: Double = 7.0
@@ -19,14 +19,14 @@ public struct ResultSegmenter {
     private var currentText: String = ""
     private var currentStart: Double?
     private var currentEnd: Double?
-    private(set) var segmentCount: Int = 0
+    public private(set) var segmentCount: Int = 0
     
     public init(offset: Double, totalDuration: Double) {
         self.offset = offset
         self.totalDuration = totalDuration
     }
     
-    public mutating func process(segment: any TranscriptionSegment) -> [TranscriptionResult] {
+    public func process(segment: any TranscriptionSegment) -> [TranscriptionResult] {
         var results: [TranscriptionResult] = []
         
         let plain = segment.transcriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -65,7 +65,7 @@ public struct ResultSegmenter {
         return results
     }
     
-    public mutating func flush() -> TranscriptionResult? {
+    public func flush() -> TranscriptionResult? {
         guard !currentText.isEmpty, let start = currentStart, let end = currentEnd else {
             return nil
         }
