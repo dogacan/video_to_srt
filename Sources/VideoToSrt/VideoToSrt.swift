@@ -95,35 +95,22 @@ struct VideoToSrt: AsyncParsableCommand {
         print("Transcribing \(fileURL.lastPathComponent)...")
 
         let outputURL = URL(fileURLWithPath: output)
-        let outputDir = outputURL.deletingLastPathComponent()
-        
-        // Ensure parent directory exists
-        try FileManager.default.createDirectory(
-            at: outputDir,
-            withIntermediateDirectories: true,
-            attributes: nil
-        )
-
-        // Verify output directory is writable
-        guard FileManager.default.isWritableFile(atPath: outputDir.path) else {
-            print("Error: Output directory '\(outputDir.path)' is not writable.")
-            throw ExitCode.failure
-        }
 
         do {
-            var fullSrtText = ""
-            let stream = transcriptionEngine.transcribe(fileURL: fileURL, options: options)
-            for try await result in stream {
-                fullSrtText += result.srtText
-                let percent = Int(result.progress * 100)
+            let coordinator = TranscriptionCoordinator()
+            try await coordinator.transcribe(
+                inputURL: fileURL,
+                outputURL: outputURL,
+                engine: transcriptionEngine,
+                options: options
+            ) { progress in
+                let percent = Int(progress * 100)
                 let progressString = "\rProgress: \(percent)% transcribed..."
                 fputs(progressString, stderr)
                 fflush(stderr)
             }
             fputs("\n", stderr) // New line after progress
             print("Transcription complete!")
-            
-            try fullSrtText.write(to: outputURL, atomically: true, encoding: .utf8)
         } catch {
             print("\nError: \(error.localizedDescription)")
             throw ExitCode.failure
