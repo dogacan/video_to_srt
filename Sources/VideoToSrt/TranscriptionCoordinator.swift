@@ -1,5 +1,14 @@
 import Foundation
 
+/// The central orchestrator for the transcription process.
+///
+/// `TranscriptionCoordinator` is responsible for managing the high-level workflow of transcribing a file:
+/// 1. Validating the output environment (ensuring directories exist and are writable).
+/// 2. Executing the transcription via a provided ``TranscriptionEngine``.
+/// 3. Handling real-time progress updates via a callback.
+/// 4. Persisting the final SRT text to the filesystem.
+///
+/// This coordinator decouples the CLI interface from the business logic of transcription and file management.
 public struct TranscriptionCoordinator {
     public init() {}
 

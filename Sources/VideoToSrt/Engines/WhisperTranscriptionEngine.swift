@@ -25,6 +25,16 @@ public enum WhisperTranscriptionError: Error, LocalizedError {
     }
 }
 
+/// A ``TranscriptionEngine`` implementation that uses the OpenAI Whisper model via the `SwiftWhisper` library.
+///
+/// This engine provides high-accuracy transcription by running local `.bin` models (e.g., `ggml-base.bin`).
+///
+/// ## Workflow
+/// 1. **Model Bootstrapping**: Verifies the existence of the model at the specified path, downloading it if necessary via ``ModelDownloader``.
+/// 2. **Audio Extraction**: Uses ``AudioExtractor`` to convert the source media into the specific 16kHz mono PCM format required by Whisper.
+/// 3. **Streaming Transcription**: Initializes the Whisper model and processes audio in real-time, yielding results through a shared ``ResultSegmenter`` to ensure consistent SRT formatting.
+///
+/// This engine is suitable for environments where Apple's native Speech APIs are unavailable or where consistent cross-platform behavior is required.
 public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
     private let logger = Logger(subsystem: "com.video_to_srt", category: "WhisperTranscriptionEngine")
     public let modelPath: String

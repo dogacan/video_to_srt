@@ -1,5 +1,6 @@
 import Foundation
 
+/// Represents a single subtitle entry in an SRT file.
 public struct SRTSegment: Sendable {
     public let text: String
     public let startSeconds: Double
@@ -12,6 +13,10 @@ public struct SRTSegment: Sendable {
     }
 }
 
+/// A utility for converting raw transcription timing and text into standard SubRip Subtitle (SRT) format.
+///
+/// This formatter handles the conversion of `TimeInterval` (seconds) into the precise `HH:MM:SS,mmm`
+/// timestamp format required by SRT readers.
 public enum SRTFormatter {
     /// Formats a single SRT segment into the standard SRT string format.
     /// Example output:
