@@ -21,6 +21,13 @@ public enum AppleTranscriptionError: Error, LocalizedError {
     }
 }
 
+// Add conformance for Apple's result
+extension SpeechTranscriber.Result: TranscriptionSegment {
+    public var text: String { String(self.text.characters) }
+    public var startTime: Double { self.range.start.seconds }
+    public var endTime: Double { (self.range.start + self.range.duration).seconds }
+}
+
 // MARK: - Engine
 
 /// A ``TranscriptionEngine`` that uses Apple's on-device
@@ -128,7 +135,7 @@ public struct AppleTranscriptionEngine: TranscriptionEngine, Sendable {
             for try await result in transcriber.results {
                 try Task.checkCancellation()
                 
-                if let transcriptionResult = segmenter.process(result: result) {
+                if let transcriptionResult = segmenter.process(segment: result) {
                     continuation.yield(transcriptionResult)
                 }
             }
@@ -153,93 +160,5 @@ public struct AppleTranscriptionEngine: TranscriptionEngine, Sendable {
             logger.error("Transcription failed: \(error, privacy: .public)")
             continuation.finish(throwing: error)
         }
-    }
-}
-
-// MARK: - ResultSegmenter
-
-/// Internal helper to accumulate transcription results into SRT-friendly segments.
-private struct ResultSegmenter {
-    private let offset: Double
-    private let totalDuration: Double
-    private let maxSegmentDuration: Double = 5.0
-    private let maxCharactersPerLine: Int = 80
-    
-    private var currentText: String = ""
-    private var currentStart: Double?
-    private var currentEnd: Double?
-    private(set) var segmentCount: Int = 0
-    
-    init(offset: Double, totalDuration: Double) {
-        self.offset = offset
-        self.totalDuration = totalDuration
-    }
-    
-    mutating func process(result: SpeechTranscriber.Result) -> TranscriptionResult? {
-        let plain = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !plain.isEmpty else { return nil }
-        
-        let startSecs = result.range.start.seconds + offset
-        let endSecs = (result.range.start + result.range.duration).seconds + offset
-        
-        if currentText.isEmpty {
-            currentText = plain
-            currentStart = startSecs
-            currentEnd = endSecs
-        } else {
-            currentText += " " + plain
-            currentEnd = endSecs
-        }
-        
-        if shouldFlush() {
-            return flush()
-        }
-        
-        return nil
-    }
-    
-    mutating func flush() -> TranscriptionResult? {
-        guard !currentText.isEmpty, let start = currentStart, let end = currentEnd else {
-            return nil
-        }
-        
-        segmentCount += 1
-        let segment = SRTSegment(text: currentText, startSeconds: start, endSeconds: end)
-        let srtText = SRTFormatter.format(segment, index: segmentCount)
-        let progress = totalDuration > 0 ? min(1.0, end / totalDuration) : 0.0
-        
-        // Reset for next segment
-        currentText = ""
-        currentStart = nil
-        currentEnd = nil
-        
-        return TranscriptionResult(srtText: srtText, progress: progress)
-    }
-    
-    private func shouldFlush() -> Bool {
-        guard let start = currentStart, let end = currentEnd else { return false }
-        
-        let duration = end - start
-        if duration >= maxSegmentDuration { return true }
-        if currentText.count >= maxCharactersPerLine { return true }
-        
-        // Punctuation check
-        let punctuation = CharacterSet.punctuationCharacters
-        if let lastChar = currentText.trimmingCharacters(in: .whitespacesAndNewlines).last,
-           punctuation.containsUnicodeScalar(lastChar.unicodeScalars.first!) {
-            // We want to split on end-of-sentence punctuation mostly
-            let sentenceEndings: Set<Character> = [".", "?", "!", "…"]
-            if sentenceEndings.contains(lastChar) {
-                return true
-            }
-        }
-        
-        return false
-    }
-}
-
-private extension CharacterSet {
-    func containsUnicodeScalar(_ scalar: Unicode.Scalar) -> Bool {
-        return contains(scalar)
     }
 }

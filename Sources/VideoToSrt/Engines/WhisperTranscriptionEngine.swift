@@ -2,6 +2,11 @@ import Foundation
 import SwiftWhisper
 import os
 
+extension Segment: TranscriptionSegment {
+    public var startTime: Double { Double(self.startTime) / 1000.0 }
+    public var endTime: Double { Double(self.endTime) / 1000.0 }
+}
+
 public enum WhisperTranscriptionError: Error, LocalizedError {
     case missingModelPath
     case modelNotFound(String)
@@ -49,16 +54,23 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     }
                     
                     let totalDuration = Double(frames.count) / 16000.0
+                    var segmenter = ResultSegmenter(
+                        offset: options.subtitleOffsetSeconds,
+                        totalDuration: totalDuration
+                    )
                     let delegate = WhisperStreamDelegate(
                         continuation: continuation,
-                        totalDuration: totalDuration,
-                        offset: options.subtitleOffsetSeconds
+                        segmenter: segmenter
                     )
                     whisper.delegate = delegate
                     
                     logger.info("Starting Whisper transcription...")
                     // We do not await the result array, we just await the process, and the delegate yields.
                     _ = try await whisper.transcribe(audioFrames: frames)
+                    
+                    if let finalResult = delegate.segmenter.flush() {
+                        continuation.yield(finalResult)
+                    }
                     
                     continuation.finish()
                 } catch {
@@ -71,31 +83,18 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
 
 private class WhisperStreamDelegate: WhisperDelegate, @unchecked Sendable {
     let continuation: AsyncThrowingStream<TranscriptionResult, Error>.Continuation
-    let totalDuration: Double
-    let offset: Double
-    var currentIndex = 1
+    var segmenter: ResultSegmenter
 
-    init(continuation: AsyncThrowingStream<TranscriptionResult, Error>.Continuation, totalDuration: Double, offset: Double) {
+    init(continuation: AsyncThrowingStream<TranscriptionResult, Error>.Continuation, segmenter: ResultSegmenter) {
         self.continuation = continuation
-        self.totalDuration = totalDuration
-        self.offset = offset
+        self.segmenter = segmenter
     }
 
     func whisper(_ aWhisper: Whisper, didProcessNewSegments segments: [Segment], atIndex index: Int) {
         for segment in segments {
-            // SwiftWhisper Segment has startTime and endTime in 10ms steps
-            let startSecs = (Double(segment.startTime) / 1000.0) + self.offset
-            let endSecs = (Double(segment.endTime) / 1000.0) + self.offset
-            
-            let srtSegment = SRTSegment(text: segment.text.trimmingCharacters(in: .whitespacesAndNewlines),
-                                        startSeconds: startSecs,
-                                        endSeconds: endSecs)
-            
-            let formatted = SRTFormatter.format(srtSegment, index: self.currentIndex)
-            self.currentIndex += 1
-            
-            let progress = totalDuration > 0 ? min(1.0, endSecs / totalDuration) : 0.0
-            continuation.yield(TranscriptionResult(srtText: formatted, progress: progress))
+            if let result = segmenter.process(segment: segment) {
+                continuation.yield(result)
+            }
         }
     }
     
