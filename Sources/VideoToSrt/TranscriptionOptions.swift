@@ -19,18 +19,14 @@ public struct TranscriptionOptions: Sendable {
     /// media formats (like MKV) before processing.
     public var ffmpegPath: String?
 
-    /// Path to the Whisper model file (`.bin`)
-    public var whisperModelPath: String?
-
     /// Optional offset in seconds to apply to subtitle timestamps.
     public var subtitleOffsetSeconds: Double
 
     // MARK: - Initialiser
 
-    public init(locale: Locale? = nil, ffmpegPath: String? = nil, whisperModelPath: String? = nil, subtitleOffsetSeconds: Double = 0.0) {
+    public init(locale: Locale? = nil, ffmpegPath: String? = nil, subtitleOffsetSeconds: Double = 0.0) {
         self.locale = locale
         self.ffmpegPath = ffmpegPath
-        self.whisperModelPath = whisperModelPath
         self.subtitleOffsetSeconds = subtitleOffsetSeconds
     }
 

@@ -21,17 +21,16 @@ public enum WhisperTranscriptionError: Error, LocalizedError {
 
 public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
     private let logger = Logger(subsystem: "com.video_to_srt", category: "WhisperTranscriptionEngine")
+    public let modelPath: String
 
-    public init() {}
+    public init(modelPath: String) {
+        self.modelPath = modelPath
+    }
 
     public func transcribe(fileURL: URL, options: TranscriptionOptions) -> AsyncThrowingStream<TranscriptionResult, Error> {
         return AsyncThrowingStream { continuation in
             Task {
                 do {
-                    guard let modelPath = options.whisperModelPath else {
-                        throw WhisperTranscriptionError.missingModelPath
-                    }
-                    
                     let modelURL = URL(fileURLWithPath: modelPath)
                     guard FileManager.default.fileExists(atPath: modelURL.path) else {
                         throw WhisperTranscriptionError.modelNotFound(modelPath)

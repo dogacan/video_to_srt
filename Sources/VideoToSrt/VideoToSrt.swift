@@ -75,25 +75,16 @@ struct VideoToSrt: AsyncParsableCommand {
         case "apple":
             transcriptionEngine = AppleTranscriptionEngine()
         case "whisper":
-            transcriptionEngine = WhisperTranscriptionEngine()
+            let modelPath = whisperModelPath ?? "models/ggml-base.bin"
+            transcriptionEngine = WhisperTranscriptionEngine(modelPath: modelPath)
         default:
             print("Error: Unknown engine '\(engine)'. Use 'apple' or 'whisper'.")
             throw ExitCode.failure
         }
 
-        // Build engine-agnostic options from CLI flags.
-        var finalWhisperModelPath = whisperModelPath
-        if finalWhisperModelPath == nil && engine.lowercased() == "whisper" {
-            let defaultPath = "models/ggml-base.bin"
-            if FileManager.default.fileExists(atPath: defaultPath) {
-                finalWhisperModelPath = defaultPath
-            }
-        }
-
         let options = TranscriptionOptions(
             locale: locale.map { Locale(identifier: $0) },
             ffmpegPath: ffmpegPath,
-            whisperModelPath: finalWhisperModelPath,
             subtitleOffsetSeconds: subtitleOffset
         )
 
