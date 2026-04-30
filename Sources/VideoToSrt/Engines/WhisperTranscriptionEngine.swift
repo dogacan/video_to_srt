@@ -39,9 +39,16 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
     private let logger = Logger(subsystem: "com.video_to_srt", category: "WhisperTranscriptionEngine")
     public let modelPath: String
     private let maxLen: Int?
+    private let shouldDownloadIfMissing: Bool
 
-    public init(modelPath: String, maxLen: Int? = nil) {
-        self.modelPath = modelPath
+    public init(modelPath: String? = nil, maxLen: Int? = nil) {
+        if let providedPath = modelPath, !providedPath.isEmpty {
+            self.modelPath = providedPath
+            self.shouldDownloadIfMissing = false
+        } else {
+            self.modelPath = "models/ggml-base.bin"
+            self.shouldDownloadIfMissing = true
+        }
         self.maxLen = maxLen
     }
 
@@ -49,8 +56,10 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
         return AsyncThrowingStream { continuation in
             Task {
                 do {
-                    // Bootstrap model if missing
-                    try await ModelDownloader.downloadIfNeeded(to: modelPath)
+                    // Bootstrap model if missing and we are using the default path
+                    if shouldDownloadIfMissing {
+                        try await ModelDownloader.downloadIfNeeded(to: modelPath)
+                    }
                     
                     let modelURL = URL(fileURLWithPath: modelPath)
                     guard FileManager.default.fileExists(atPath: modelURL.path) else {

@@ -44,7 +44,6 @@ struct VideoToSrt: AsyncParsableCommand {
         name: .long,
         help: """
               Absolute path to the whisper model file (e.g. ggml-tiny.bin).
-              Defaults to 'models/ggml-base.bin' if it exists.
               """
     )
     var whisperModelPath: String?
@@ -81,8 +80,7 @@ struct VideoToSrt: AsyncParsableCommand {
         case "apple":
             transcriptionEngine = AppleTranscriptionEngine()
         case "whisper":
-            let modelPath = whisperModelPath ?? "models/ggml-base.bin"
-            transcriptionEngine = WhisperTranscriptionEngine(modelPath: modelPath, maxLen: whisperMaxLen)
+            transcriptionEngine = WhisperTranscriptionEngine(modelPath: whisperModelPath, maxLen: whisperMaxLen)
         default:
             print("Error: Unknown engine '\(engine)'. Use 'apple' or 'whisper'.")
             throw ExitCode.failure
