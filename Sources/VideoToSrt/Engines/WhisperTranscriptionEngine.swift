@@ -4,8 +4,8 @@ import os
 
 extension Segment: TranscriptionSegment {
     public var text: String { self.text }
-    public var startTime: Double { Double(self.start) / 1000.0 }
-    public var endTime: Double { Double(self.end) / 1000.0 }
+    public var startTime: Double { Double(self.startTime) / 1000.0 }
+    public var endTime: Double { Double(self.endTime) / 1000.0 }
 }
 
 public enum WhisperTranscriptionError: Error, LocalizedError {
