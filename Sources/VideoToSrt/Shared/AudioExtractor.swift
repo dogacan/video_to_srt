@@ -2,7 +2,7 @@ import Foundation
 @preconcurrency import AVFoundation
 import os
 
-public enum AudioExtractionError: Error, LocalizedError {
+public enum AudioExtractionError: Error, LocalizedError, Equatable {
     case assetNotReadable(Error?)
     case unsupportedMediaFormat(String)
     case audioExportFailed(String)
@@ -27,6 +27,18 @@ public enum AudioExtractionError: Error, LocalizedError {
             return "Audio conversion failed: \(reason)"
         case .invalidInputSource:
             return "The input source is not a valid file URL."
+        }
+    }
+
+    public static func == (lhs: AudioExtractionError, rhs: AudioExtractionError) -> Bool {
+        switch (lhs, rhs) {
+        case (.assetNotReadable, .assetNotReadable): return true
+        case (.unsupportedMediaFormat, .unsupportedMediaFormat): return true
+        case (.audioExportFailed, .audioExportFailed): return true
+        case (.noAudioTrack, .noAudioTrack): return true
+        case (.conversionFailed, .conversionFailed): return true
+        case (.invalidInputSource, .invalidInputSource): return true
+        default: return false
         }
     }
 }
@@ -243,13 +255,13 @@ public struct AudioExtractor {
         init(_ value: T) { self.value = value }
     }
 
-    private static func validateSourceURL(_ url: URL) throws {
+    internal static func validateSourceURL(_ url: URL) throws {
         guard url.isFileURL else {
             throw AudioExtractionError.invalidInputSource
         }
     }
 
-    private static func validateFFmpegPath(_ path: String) throws {
+    internal static func validateFFmpegPath(_ path: String) throws {
         let fileManager = FileManager.default
         var isDirectory: ObjCBool = false
         guard fileManager.fileExists(atPath: path, isDirectory: &isDirectory), !isDirectory.boolValue else {
@@ -261,7 +273,7 @@ public struct AudioExtractor {
         }
     }
 
-    private static func isUnsupportedFormat(_ ext: String) -> Bool {
+    internal static func isUnsupportedFormat(_ ext: String) -> Bool {
         unsupportedFormats.contains(ext)
     }
 

@@ -26,7 +26,7 @@ swift run VideoToSrt --engine whisper --whisper-model-path ./models/ggml-base.bi
 Run the automated test suite with the following command to ensure all engines (Apple & Whisper) are working correctly:
 
 ```bash
-swift test --disable-sandbox \
+swift test \
   -Xswiftc -F -Xswiftc /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks \
   -Xlinker -rpath -Xlinker /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks
 ```
