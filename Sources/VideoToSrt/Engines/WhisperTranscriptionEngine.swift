@@ -3,9 +3,9 @@ import SwiftWhisper
 import os
 
 extension Segment: TranscriptionSegment {
-    public var text: String { self.text }
-    public var startTime: Double { Double(self.start) / 1000.0 }
-    public var endTime: Double { Double(self.end) / 1000.0 }
+    public var transcriptionText: String { self.text }
+    public var transcriptionStartTime: Double { Double(self.startTime) / 1000.0 }
+    public var transcriptionEndTime: Double { Double(self.endTime) / 1000.0 }
 }
 
 public enum WhisperTranscriptionError: Error, LocalizedError {

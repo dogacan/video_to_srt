@@ -2,9 +2,9 @@ import Foundation
 
 /// A common protocol for engine-specific transcription results.
 public protocol TranscriptionSegment {
-    var text: String { get }
-    var startTime: Double { get }
-    var endTime: Double { get }
+    var transcriptionText: String { get }
+    var transcriptionStartTime: Double { get }
+    var transcriptionEndTime: Double { get }
 }
 
 /// Internal helper to accumulate transcription results into SRT-friendly segments.
@@ -25,11 +25,11 @@ public struct ResultSegmenter {
     }
     
     public mutating func process(segment: any TranscriptionSegment) -> TranscriptionResult? {
-        let plain = segment.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let plain = segment.transcriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !plain.isEmpty else { return nil }
         
-        let startSecs = segment.startTime + offset
-        let endSecs = segment.endTime + offset
+        let startSecs = segment.transcriptionStartTime + offset
+        let endSecs = segment.transcriptionEndTime + offset
         
         if currentText.isEmpty {
             currentText = plain
