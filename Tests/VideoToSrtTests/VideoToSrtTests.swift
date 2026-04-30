@@ -26,11 +26,11 @@ struct VideoToSrtTests {
             .deletingLastPathComponent() // root/
             .appendingPathComponent("models")
             .appendingPathComponent("ggml-base.bin")
-        let options = TranscriptionOptions(locale: Locale(identifier: "en"), ffmpegPath: ffmpegPath, whisperModelPath: modelURL.path)
+        let options = TranscriptionOptions(locale: Locale(identifier: "en"), ffmpegPath: ffmpegPath)
         try await runTranscriptionTest(
             audioName: "gwb_columbia.ogg",
             srtName: "gwb_columbia.srt",
-            engine: WhisperTranscriptionEngine(),
+            engine: WhisperTranscriptionEngine(modelPath: modelURL.path),
             options: options,
             matchThreshold: 0.85
         )
@@ -43,11 +43,11 @@ struct VideoToSrtTests {
             .deletingLastPathComponent() // root/
             .appendingPathComponent("models")
             .appendingPathComponent("ggml-base.bin")
-        let options = TranscriptionOptions(locale: Locale(identifier: "en"), ffmpegPath: ffmpegPath, whisperModelPath: modelURL.path)
+        let options = TranscriptionOptions(locale: Locale(identifier: "en"), ffmpegPath: ffmpegPath)
         try await runTranscriptionTest(
             audioName: "micro_machines.wav",
             srtName: "micro_machines.srt",
-            engine: WhisperTranscriptionEngine(),
+            engine: WhisperTranscriptionEngine(modelPath: modelURL.path),
             options: options,
             matchThreshold: 0.55
         )
