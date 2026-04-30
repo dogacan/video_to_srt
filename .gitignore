@@ -9,3 +9,5 @@ DerivedData/
 Package.resolved
 /models/*.bin
 Frameworks/whisper.xcframework
+Tests/VideoToSrtTests/samples/gwb_columbia.ogg
+Tests/VideoToSrtTests/samples/micro_machines.wav
