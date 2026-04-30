@@ -72,7 +72,7 @@ public struct AppleTranscriptionEngine: TranscriptionEngine, Sendable {
 
                     logger.info("Extracting audio from '\(fileURL.lastPathComponent)'…")
                     // ── 4. Extract audio to a temporary file ───────────────────────────
-                    let audioFileURL = try AudioExtractor.extractAudioForApple(from: fileURL, ffmpegPath: options.ffmpegPath)
+                    let audioFileURL = try await AudioExtractor.extractAudioForApple(from: fileURL, ffmpegPath: options.ffmpegPath)
                     defer {
                         try? FileManager.default.removeItem(at: audioFileURL)
                     }

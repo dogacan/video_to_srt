@@ -38,7 +38,7 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     }
 
                     logger.info("Extracting and converting audio to 16kHz PCM for Whisper...")
-                    let frames = try AudioExtractor.extractAudioForWhisper(from: fileURL, ffmpegPath: options.ffmpegPath)
+                    let frames = try await AudioExtractor.extractAudioForWhisper(from: fileURL, ffmpegPath: options.ffmpegPath)
                     
                     logger.info("Initializing Whisper with model...")
                     let whisper = Whisper(fromFileURL: modelURL)
