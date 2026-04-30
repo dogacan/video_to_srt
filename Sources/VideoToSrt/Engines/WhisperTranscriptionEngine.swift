@@ -3,8 +3,9 @@ import SwiftWhisper
 import os
 
 extension Segment: TranscriptionSegment {
-    public var startTime: Double { Double(self.startTime) / 1000.0 }
-    public var endTime: Double { Double(self.endTime) / 1000.0 }
+    public var text: String { self.text }
+    public var startTime: Double { Double(self.start) / 1000.0 }
+    public var endTime: Double { Double(self.end) / 1000.0 }
 }
 
 public enum WhisperTranscriptionError: Error, LocalizedError {
@@ -54,7 +55,7 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     }
                     
                     let totalDuration = Double(frames.count) / 16000.0
-                    var segmenter = ResultSegmenter(
+                    let segmenter = ResultSegmenter(
                         offset: options.subtitleOffsetSeconds,
                         totalDuration: totalDuration
                     )
