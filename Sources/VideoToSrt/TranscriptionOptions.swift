@@ -24,7 +24,11 @@ public struct TranscriptionOptions: Sendable {
 
     // MARK: - Initialiser
 
-    public init(locale: Locale? = nil, ffmpegPath: String? = nil, subtitleOffsetSeconds: Double = 0.0) {
+    public init(
+        locale: Locale? = nil,
+        ffmpegPath: String? = nil,
+        subtitleOffsetSeconds: Double = 0.0
+    ) {
         self.locale = locale
         self.ffmpegPath = ffmpegPath
         self.subtitleOffsetSeconds = subtitleOffsetSeconds

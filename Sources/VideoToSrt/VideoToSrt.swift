@@ -55,6 +55,12 @@ struct VideoToSrt: AsyncParsableCommand {
     )
     var subtitleOffset: Double = 0.0
 
+    @Option(
+        name: .long,
+        help: "Whisper-specific: Maximum segment length in characters."
+    )
+    var whisperMaxLen: Int?
+
     mutating func run() async throws {
         let fileURL = URL(fileURLWithPath: inputPath)
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
@@ -76,7 +82,7 @@ struct VideoToSrt: AsyncParsableCommand {
             transcriptionEngine = AppleTranscriptionEngine()
         case "whisper":
             let modelPath = whisperModelPath ?? "models/ggml-base.bin"
-            transcriptionEngine = WhisperTranscriptionEngine(modelPath: modelPath)
+            transcriptionEngine = WhisperTranscriptionEngine(modelPath: modelPath, maxLen: whisperMaxLen)
         default:
             print("Error: Unknown engine '\(engine)'. Use 'apple' or 'whisper'.")
             throw ExitCode.failure

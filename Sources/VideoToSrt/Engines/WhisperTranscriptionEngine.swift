@@ -38,9 +38,11 @@ public enum WhisperTranscriptionError: Error, LocalizedError {
 public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
     private let logger = Logger(subsystem: "com.video_to_srt", category: "WhisperTranscriptionEngine")
     public let modelPath: String
+    private let maxLen: Int?
 
-    public init(modelPath: String) {
+    public init(modelPath: String, maxLen: Int? = nil) {
         self.modelPath = modelPath
+        self.maxLen = maxLen
     }
 
     public func transcribe(fileURL: URL, options: TranscriptionOptions) -> AsyncThrowingStream<TranscriptionResult, Error> {
@@ -66,6 +68,16 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                         logger.info("Setting Whisper language to \(languageCode)...")
                         whisper.params.language = language
                     }
+                    
+                    if let maxLen = self.maxLen {
+                        logger.info("Setting Whisper max segment length to \(maxLen) characters...")
+                        whisper.params.max_len = Int32(maxLen)
+                        // max_len works best with token_timestamps enabled
+                        whisper.params.token_timestamps = true
+                    }
+                    
+                    // Word boundary splitting is almost always desired when character limits are active
+                    whisper.params.split_on_word = true
                     
                     let totalDuration = Double(frames.count) / 16000.0
                     let segmenter = ResultSegmenter(
@@ -106,6 +118,12 @@ private class WhisperStreamDelegate: WhisperDelegate, @unchecked Sendable {
 
     func whisper(_ aWhisper: Whisper, didProcessNewSegments segments: [Segment], atIndex index: Int) {
         for segment in segments {
+            let duration = (Double(segment.endTime) - Double(segment.startTime)) / 1000.0
+            if duration > 7.0 {
+                print("⚠️ [DEBUG] Long Whisper segment detected (\(String(format: "%.2f", duration))s): \(segment.text)")
+                print("💡 Tip: Try using --whisper-max-len (e.g., --whisper-max-len 60) to force shorter segments.")
+            }
+            
             let results = segmenter.process(segment: segment)
             for result in results {
                 continuation.yield(result)
