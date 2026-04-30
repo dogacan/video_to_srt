@@ -23,7 +23,7 @@ public enum AppleTranscriptionError: Error, LocalizedError {
 
 // Add conformance for Apple's result
 extension SpeechTranscriber.Result: TranscriptionSegment {
-    public var transcriptionText: String { self.text }
+    public var transcriptionText: String { String(self.text.characters) }
     public var transcriptionStartTime: Double { self.range.start.seconds }
     public var transcriptionEndTime: Double { (self.range.start + self.range.duration).seconds }
 }
