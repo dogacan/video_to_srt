@@ -51,15 +51,23 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .long,
-        help: "Offset in seconds to apply to all subtitle timestamps (e.g., 0.5 to delay, -0.5 to advance)."
+        help: "Offset in seconds to apply to all subtitle timestamps (e.g., 0.5 to delay, -0.5 to advance). Default: 0.0"
     )
-    var subtitleOffset: Double = 0.5
+    var subtitleOffset: Double = 0.0
 
     mutating func run() async throws {
         let fileURL = URL(fileURLWithPath: inputPath)
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
             print("Error: File not found at path '\(inputPath)'")
             throw ExitCode.failure
+        }
+
+        if let localeId = locale {
+            let testLocale = Locale(identifier: localeId)
+            if testLocale.identifier.isEmpty || testLocale.identifier == "und" {
+                print("Error: Invalid locale identifier '\(localeId)'")
+                throw ExitCode.failure
+            }
         }
 
         let transcriptionEngine: any TranscriptionEngine
@@ -96,28 +104,37 @@ struct VideoToSrt: AsyncParsableCommand {
         print("Transcribing \(fileURL.lastPathComponent)...")
 
         let outputURL = URL(fileURLWithPath: output)
-        FileManager.default.createFile(atPath: outputURL.path, contents: nil, attributes: nil)
-        guard let fileHandle = try? FileHandle(forWritingTo: outputURL) else {
-            print("Error: Failed to open output file for writing.")
+        let outputDir = outputURL.deletingLastPathComponent()
+        
+        // Ensure parent directory exists
+        try FileManager.default.createDirectory(
+            at: outputDir,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+
+        // Verify output directory is writable
+        guard FileManager.default.isWritableFile(atPath: outputDir.path) else {
+            print("Error: Output directory '\(outputDir.path)' is not writable.")
             throw ExitCode.failure
         }
 
         do {
+            var fullSrtText = ""
             let stream = transcriptionEngine.transcribe(fileURL: fileURL, options: options)
             for try await result in stream {
-                if let data = result.srtText.data(using: .utf8) {
-                    try fileHandle.seekToEnd()
-                    try fileHandle.write(contentsOf: data)
-                }
+                fullSrtText += result.srtText
                 let percent = Int(result.progress * 100)
-                print("\rProgress: \(percent)% transcribed...", terminator: "")
-                fflush(stdout)
+                let progressString = "\rProgress: \(percent)% transcribed..."
+                fputs(progressString, stderr)
+                fflush(stderr)
             }
-            print("\nTranscription complete!")
-            try fileHandle.close()
+            fputs("\n", stderr) // New line after progress
+            print("Transcription complete!")
+            
+            try fullSrtText.write(to: outputURL, atomically: true, encoding: .utf8)
         } catch {
             print("\nError: \(error.localizedDescription)")
-            try? fileHandle.close()
             throw ExitCode.failure
         }
 
