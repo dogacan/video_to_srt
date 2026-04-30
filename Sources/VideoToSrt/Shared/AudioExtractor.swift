@@ -221,8 +221,8 @@ public struct AudioExtractor {
             }
             
             if let channelData = outputBuffer.floatChannelData {
-                let blockFloats = Array(UnsafeBufferPointer(start: channelData[0], count: Int(outputBuffer.frameLength)))
-                floats.append(contentsOf: blockFloats)
+                floats.reserveCapacity(floats.count + Int(outputBuffer.frameLength))
+                floats.append(contentsOf: UnsafeBufferPointer(start: channelData[0], count: Int(outputBuffer.frameLength)))
             }
             
             // Reset for next conversion call

@@ -24,14 +24,15 @@ public struct TranscriptionCoordinator {
             throw NSError(domain: "VideoToSrt", code: 1, userInfo: [NSLocalizedDescriptionKey: "Output directory '\(outputDir.path)' is not writable."])
         }
 
-        var fullSrtText = ""
+        var srtParts: [String] = []
         let stream = engine.transcribe(fileURL: inputURL, options: options)
         
         for try await result in stream {
-            fullSrtText += result.srtText
+            srtParts.append(result.srtText)
             progressHandler(result.progress)
         }
         
+        let fullSrtText = srtParts.joined(separator: "")
         try fullSrtText.write(to: outputURL, atomically: true, encoding: .utf8)
     }
 }
