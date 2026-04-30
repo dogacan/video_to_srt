@@ -11,7 +11,7 @@ public protocol TranscriptionSegment {
 public struct ResultSegmenter {
     private let offset: Double
     private let totalDuration: Double
-    private let maxSegmentDuration: Double = 5.0
+    private let maxSegmentDuration: Double = 7.0
     private let maxCharactersPerLine: Int = 80
     
     private static let sentenceEndings: Set<Character> = [".", "?", "!", "…"]
@@ -26,13 +26,26 @@ public struct ResultSegmenter {
         self.totalDuration = totalDuration
     }
     
-    public mutating func process(segment: any TranscriptionSegment) -> TranscriptionResult? {
+    public mutating func process(segment: any TranscriptionSegment) -> [TranscriptionResult] {
+        var results: [TranscriptionResult] = []
+        
         let plain = segment.transcriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !plain.isEmpty else { return nil }
+        guard !plain.isEmpty else { return [] }
         
         let startSecs = segment.transcriptionStartTime + offset
         let endSecs = segment.transcriptionEndTime + offset
         
+        // 1. Flush before combine if adding this segment would exceed max duration
+        if let start = currentStart, !currentText.isEmpty {
+            let potentialDuration = endSecs - start
+            if potentialDuration > maxSegmentDuration {
+                if let flushed = flush() {
+                    results.append(flushed)
+                }
+            }
+        }
+        
+        // 2. Accumulate
         if currentText.isEmpty {
             currentText = plain
             currentStart = startSecs
@@ -42,11 +55,14 @@ public struct ResultSegmenter {
             currentEnd = endSecs
         }
         
+        // 3. Flush if now over limit or ends with punctuation
         if shouldFlush() {
-            return flush()
+            if let flushed = flush() {
+                results.append(flushed)
+            }
         }
         
-        return nil
+        return results
     }
     
     public mutating func flush() -> TranscriptionResult? {

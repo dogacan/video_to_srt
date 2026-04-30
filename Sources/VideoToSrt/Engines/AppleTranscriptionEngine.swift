@@ -135,7 +135,8 @@ public struct AppleTranscriptionEngine: TranscriptionEngine, Sendable {
             for try await result in transcriber.results {
                 try Task.checkCancellation()
                 
-                if let transcriptionResult = segmenter.process(segment: result) {
+                let results = segmenter.process(segment: result)
+                for transcriptionResult in results {
                     continuation.yield(transcriptionResult)
                 }
             }

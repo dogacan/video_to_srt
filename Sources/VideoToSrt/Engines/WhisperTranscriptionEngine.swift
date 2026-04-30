@@ -106,7 +106,8 @@ private class WhisperStreamDelegate: WhisperDelegate, @unchecked Sendable {
 
     func whisper(_ aWhisper: Whisper, didProcessNewSegments segments: [Segment], atIndex index: Int) {
         for segment in segments {
-            if let result = segmenter.process(segment: segment) {
+            let results = segmenter.process(segment: segment)
+            for result in results {
                 continuation.yield(result)
             }
         }
