@@ -42,4 +42,8 @@ swift test --disable-sandbox \
   -Xswiftc -F -Xswiftc /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks \
   -Xlinker -rpath -Xlinker /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks
 ```
+   - Before running tests, ensure test data is downloaded by running:
+```bash
+./scripts/download_test_data.sh
+```
    - Use the `runTranscriptionTest` helper to maintain consistency across engines.

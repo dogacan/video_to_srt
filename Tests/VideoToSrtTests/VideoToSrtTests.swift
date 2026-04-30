@@ -64,7 +64,7 @@ struct VideoToSrtTests {
         let goldenSRTURL = samplesURL.appendingPathComponent(srtName)
         
         guard FileManager.default.fileExists(atPath: audioURL.path) else {
-            Issue.record("Sample file missing: \(audioURL.path)")
+            Issue.record("Sample file missing: \(audioURL.path). Please run 'scripts/download_test_data.sh' to download test samples.")
             return
         }
         guard FileManager.default.fileExists(atPath: goldenSRTURL.path) else {

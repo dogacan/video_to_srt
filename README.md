@@ -36,7 +36,13 @@ swift run VideoToSrt --engine whisper --whisper-model-path ./models/ggml-base.bi
 
 ## Testing
 
-Run the automated test suite with the following command:
+Before running tests, download the required sample media files:
+
+```bash
+./scripts/download_test_data.sh
+```
+
+Then run the automated test suite:
 
 ```bash
 swift test \
