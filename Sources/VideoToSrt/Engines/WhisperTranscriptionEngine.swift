@@ -72,6 +72,18 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     logger.info("Initializing Whisper with model...")
                     let whisper = Whisper(fromFileURL: modelURL)
                     
+                    // Suppress non-speech tokens
+                    whisper.params.suppress_non_speech_tokens = true
+                    
+                    // No need to print progress from the library, we have our own progress reporter
+                    whisper.params.print_progress = false
+                    whisper.params.print_timestamps = false
+                    whisper.params.print_special = false
+                    whisper.params.print_realtime = false
+
+                    // Use all available cores for faster transcription
+                    whisper.params.n_threads = max(1,Int32(ProcessInfo.processInfo.activeProcessorCount))
+
                     if let languageCode = options.locale?.language.languageCode?.identifier,
                        let language = WhisperLanguage(rawValue: languageCode) {
                         logger.info("Setting Whisper language to \(languageCode)...")
