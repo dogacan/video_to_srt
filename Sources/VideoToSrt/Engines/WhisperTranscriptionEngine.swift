@@ -37,6 +37,9 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
         return AsyncThrowingStream { continuation in
             Task {
                 do {
+                    // Bootstrap model if missing
+                    try await ModelDownloader.downloadIfNeeded(to: modelPath)
+                    
                     let modelURL = URL(fileURLWithPath: modelPath)
                     guard FileManager.default.fileExists(atPath: modelURL.path) else {
                         throw WhisperTranscriptionError.modelNotFound(modelPath)
