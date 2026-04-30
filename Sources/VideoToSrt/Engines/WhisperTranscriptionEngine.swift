@@ -116,5 +116,7 @@ private class WhisperStreamDelegate: WhisperDelegate, @unchecked Sendable {
     
     func whisper(_ aWhisper: Whisper, didCompleteWithSegments segments: [Segment]) {}
     
-    func whisper(_ aWhisper: Whisper, didErrorWith error: Error) {}
+    func whisper(_ aWhisper: Whisper, didErrorWith error: Error) {
+        continuation.finish(throwing: error)
+    }
 }

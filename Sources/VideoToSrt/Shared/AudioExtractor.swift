@@ -306,12 +306,28 @@ public struct AudioExtractor {
         logger.debug("Executing: \(([executablePath] + arguments).joined(separator: " "), privacy: .public)")
 
         try process.run()
+        
+        // Handle cancellation
+        let cancellationTask = Task {
+            while process.isRunning {
+                if Task.isCancelled {
+                    process.terminate()
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s check
+            }
+        }
+        
         let data = (try? pipe.fileHandleForReading.readToEnd()) ?? Data()
         process.waitUntilExit()
+        cancellationTask.cancel()
 
         if process.terminationStatus == 0 {
             return outputURL
         } else {
+            if Task.isCancelled {
+                throw CancellationError()
+            }
             let ffmpegOutput = String(data: data, encoding: .utf8) ?? "Unknown ffmpeg output"
             throw AudioExtractionError.audioExportFailed("ffmpeg failed: \(ffmpegOutput)")
         }

@@ -14,6 +14,8 @@ public struct ResultSegmenter {
     private let maxSegmentDuration: Double = 5.0
     private let maxCharactersPerLine: Int = 80
     
+    private static let sentenceEndings: Set<Character> = [".", "?", "!", "…"]
+
     private var currentText: String = ""
     private var currentStart: Double?
     private var currentEnd: Double?
@@ -72,23 +74,12 @@ public struct ResultSegmenter {
         if duration >= maxSegmentDuration { return true }
         if currentText.count >= maxCharactersPerLine { return true }
         
-        // Punctuation check
-        let punctuation = CharacterSet.punctuationCharacters
-        if let lastChar = currentText.trimmingCharacters(in: .whitespacesAndNewlines).last,
-           punctuation.containsUnicodeScalar(lastChar.unicodeScalars.first!) {
-            // We want to split on end-of-sentence punctuation mostly
-            let sentenceEndings: Set<Character> = [".", "?", "!", "…"]
-            if sentenceEndings.contains(lastChar) {
-                return true
-            }
+        // Punctuation check - avoid trimming the whole string
+        if let lastChar = currentText.last(where: { !$0.isWhitespace }),
+           Self.sentenceEndings.contains(lastChar) {
+            return true
         }
         
         return false
-    }
-}
-
-private extension CharacterSet {
-    func containsUnicodeScalar(_ scalar: Unicode.Scalar) -> Bool {
-        return contains(scalar)
     }
 }

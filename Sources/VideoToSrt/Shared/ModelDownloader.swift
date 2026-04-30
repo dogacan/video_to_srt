@@ -28,31 +28,11 @@ public struct ModelDownloader {
         let directoryURL = destinationURL.deletingLastPathComponent()
         try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
 
-        let (bytes, response) = try await URLSession.shared.bytes(from: modelURL)
+        let (data, response) = try await URLSession.shared.data(from: modelURL)
         
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
             throw ModelDownloadError.downloadFailed("Server returned an error.")
         }
-
-        let totalBytes = httpResponse.expectedContentLength
-        var downloadedBytes: Int64 = 0
-        var data = Data()
-        if totalBytes > 0 {
-            data.reserveCapacity(Int(totalBytes))
-        }
-
-        for try await byte in bytes {
-            data.append(byte)
-            downloadedBytes += 1
-            
-            if downloadedBytes % (1024 * 1024) == 0 { // Update every 1MB
-                let percent = totalBytes > 0 ? Int(Double(downloadedBytes) / Double(totalBytes) * 100) : 0
-                let progressString = "\rDownload Progress: \(percent)%..."
-                fputs(progressString, stderr)
-                fflush(stderr)
-            }
-        }
-        fputs("\rDownload Progress: 100% (Complete)          \n", stderr)
 
         try data.write(to: destinationURL)
         print("Model saved to \(path)")
