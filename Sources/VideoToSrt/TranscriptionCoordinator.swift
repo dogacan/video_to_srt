@@ -33,13 +33,22 @@ public struct TranscriptionCoordinator {
             throw NSError(domain: "VideoToSrt", code: 1, userInfo: [NSLocalizedDescriptionKey: "Output directory '\(outputDir.path)' is not writable."])
         }
 
-        var fullSrtText = ""
+        // Create an empty file first
+        FileManager.default.createFile(atPath: outputURL.path, contents: nil, attributes: nil)
+
+        // Open the file handle for writing
+        let fileHandle = try FileHandle(forWritingTo: outputURL)
+        defer {
+            try? fileHandle.close()
+        }
+
         let stream = engine.transcribe(fileURL: inputURL, options: options)
         
         for try await result in stream {
-            fullSrtText.append(result.srtText)
+            if let data = result.srtText.data(using: .utf8) {
+                try fileHandle.write(contentsOf: data)
+            }
             progressHandler(result.progress)
         }
-        try fullSrtText.write(to: outputURL, atomically: true, encoding: .utf8)
     }
 }
