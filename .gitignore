@@ -14,3 +14,4 @@ Tests/VideoToSrtTests/samples/micro_machines.wav
 *.srt
 *.mp4
 *.mkv
+*.mp3
