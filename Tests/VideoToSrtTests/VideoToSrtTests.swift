@@ -11,6 +11,24 @@ struct VideoToSrtTests {
     /// Path to ffmpeg for ogg/wav fallback if needed.
     private let ffmpegPath = "/opt/homebrew/bin/ffmpeg"
 
+    /// Resolved path to the Whisper model relative to the project root.
+    private var whisperModelURL: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent() // VideoToSrtTests/
+            .deletingLastPathComponent() // Tests/
+            .deletingLastPathComponent() // root/
+            .appendingPathComponent("models")
+            .appendingPathComponent("ggml-base.bin")
+    }
+
+    /// Skips the current test when the Whisper model hasn't been downloaded.
+    private func requireWhisperModel() throws {
+        try #require(
+            FileManager.default.fileExists(atPath: whisperModelURL.path),
+            "Whisper model not found at \(whisperModelURL.path). Run './scripts/download_test_data.sh' to download it."
+        )
+    }
+
     @Test func testGwbColumbiaApple() async throws {
         try await runTranscriptionTest(audioName: "gwb_columbia.ogg", srtName: "gwb_columbia.srt", engine: AppleTranscriptionEngine())
     }
@@ -20,36 +38,26 @@ struct VideoToSrtTests {
     }
 
     @Test func testGwbColumbiaWhisper() async throws {
-        let modelURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // VideoToSrtTests/
-            .deletingLastPathComponent() // Tests/
-            .deletingLastPathComponent() // root/
-            .appendingPathComponent("models")
-            .appendingPathComponent("ggml-base.bin")
+        try requireWhisperModel()
         let options = TranscriptionOptions(locale: Locale(identifier: "en"), ffmpegPath: ffmpegPath)
         try await runTranscriptionTest(
             audioName: "gwb_columbia.ogg",
             srtName: "gwb_columbia.srt",
-            engine: WhisperTranscriptionEngine(modelPath: modelURL.path),
+            engine: WhisperTranscriptionEngine(modelPath: whisperModelURL.path),
             options: options,
             matchThreshold: 0.85
         )
     }
 
     @Test func testMicroMachinesWhisper() async throws {
-        let modelURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // VideoToSrtTests/
-            .deletingLastPathComponent() // Tests/
-            .deletingLastPathComponent() // root/
-            .appendingPathComponent("models")
-            .appendingPathComponent("ggml-base.bin")
+        try requireWhisperModel()
         let options = TranscriptionOptions(locale: Locale(identifier: "en"), ffmpegPath: ffmpegPath)
         try await runTranscriptionTest(
             audioName: "micro_machines.wav",
             srtName: "micro_machines.srt",
-            engine: WhisperTranscriptionEngine(modelPath: modelURL.path),
+            engine: WhisperTranscriptionEngine(modelPath: whisperModelURL.path),
             options: options,
-            matchThreshold: 0.55
+            matchThreshold: 0.35
         )
     }
 

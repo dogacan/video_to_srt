@@ -15,6 +15,13 @@ public struct WhisperParams {
     public var splitOnWord: Bool = false
     public var suppressNST: Bool = true
     
+    // Anti-hallucination parameters
+    public var entropyThold: Float = 2.4        // segments with entropy above this are considered failed
+    public var logprobThold: Float = -1.0        // segments with avg logprob below this are considered failed
+    public var noSpeechThold: Float = 0.6        // if no-speech prob exceeds this, treat segment as silence
+    public var noContext: Bool = false            // don't use previous text as prompt (breaks hallucination loops)
+    public var suppressBlank: Bool = true         // suppress blank outputs at the start of sampling
+    
     public init() {}
 }
 
@@ -36,7 +43,7 @@ public enum WhisperError: Error, LocalizedError {
 }
 
 public final class WhisperContext: @unchecked Sendable {
-    private let context: OpaquePointer
+    private var context: OpaquePointer?
     
     public init(modelPath: String) throws {
         guard FileManager.default.fileExists(atPath: modelPath) else {
@@ -51,7 +58,14 @@ public final class WhisperContext: @unchecked Sendable {
     }
     
     deinit {
-        whisper_free(context)
+        free()
+    }
+    
+    public func free() {
+        if let ctx = context {
+            whisper_free(ctx)
+            context = nil
+        }
     }
     
     public func transcribe(
@@ -59,6 +73,9 @@ public final class WhisperContext: @unchecked Sendable {
         params: WhisperParams,
         onNewSegments: (@Sendable ([WhisperSegment]) -> Void)? = nil
     ) async throws -> [WhisperSegment] {
+        guard let context = self.context else {
+            throw WhisperError.failedToInitialize("Context has been freed")
+        }
         var whisperParams = whisper_full_default_params(WHISPER_SAMPLING_GREEDY)
         
         // Apply params
@@ -71,6 +88,13 @@ public final class WhisperContext: @unchecked Sendable {
         whisperParams.token_timestamps = params.tokenTimestamps
         whisperParams.split_on_word = params.splitOnWord
         whisperParams.suppress_nst = params.suppressNST
+        
+        // Anti-hallucination parameters
+        whisperParams.entropy_thold = params.entropyThold
+        whisperParams.logprob_thold = params.logprobThold
+        whisperParams.no_speech_thold = params.noSpeechThold
+        whisperParams.no_context = params.noContext
+        whisperParams.suppress_blank = params.suppressBlank
         
         if params.language != "auto" {
             params.language.withCString { whisperParams.language = $0 }

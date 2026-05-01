@@ -11,3 +11,6 @@ Package.resolved
 Frameworks/whisper.xcframework
 Tests/VideoToSrtTests/samples/gwb_columbia.ogg
 Tests/VideoToSrtTests/samples/micro_machines.wav
+*.srt
+*.mp4
+*.mkv
