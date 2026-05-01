@@ -53,5 +53,5 @@ Note: `--disable-sandbox` is required because the tests execute `ffmpeg` to extr
 ## Requirements
 
 - Swift 6+
-- macOS 15+ (Project target is 26, but functionality relies on recent macOS)
+- macOS 26+
 - FFmpeg (optional, recommended for wide format support)
