@@ -56,6 +56,25 @@ struct VideoToSrt: AsyncParsableCommand {
     )
     var whisperVadPath: String?
 
+    @Flag(
+        name: .long,
+        inversion: .prefixedNo,
+        help: "Whisper-specific: Enable Voice Activity Detection (VAD) to suppress hallucinations in silence."
+    )
+    var whisperUseVad: Bool = true
+
+    @Option(
+        name: .long,
+        help: "Whisper-specific: VAD probability threshold (0.0 to 1.0). Lower values are less aggressive. Default: 0.2"
+    )
+    var whisperVadThreshold: Float = 0.2
+
+    @Option(
+        name: .long,
+        help: "Whisper-specific: No-speech probability threshold (0.0 to 1.0). If a segment exceeds this, it is considered silence. Default: 0.6"
+    )
+    var whisperNoSpeechThold: Float = 0.6
+
     @Option(
         name: .long,
         help: "Offset in seconds to apply to all subtitle timestamps (e.g., 0.5 to delay, -0.5 to advance). Default: 0.0"
@@ -91,6 +110,9 @@ struct VideoToSrt: AsyncParsableCommand {
             transcriptionEngine = WhisperTranscriptionEngine(
                 modelPath: whisperModelPath,
                 vadModelPath: whisperVadPath,
+                useVAD: whisperUseVad,
+                vadThreshold: whisperVadThreshold,
+                noSpeechThold: whisperNoSpeechThold,
                 maxLen: whisperMaxLen
             )
         default:

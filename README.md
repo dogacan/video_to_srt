@@ -31,6 +31,10 @@ swift run VideoToSrt --engine whisper --whisper-model-path ./models/ggml-base.bi
 | `--locale` | | BCP-47 locale identifier (e.g., `en-US`, `fr-FR`). | System Locale |
 | `--ffmpeg-path` | | Path to `ffmpeg` executable for unsupported formats. | - |
 | `--whisper-model-path`| | Path to the whisper model file (e.g. `ggml-tiny.bin`). | - |
+| `--whisper-vad-path`  | | Path to the whisper VAD model file. | - |
+| `--whisper-use-vad`   | | Enable VAD to suppress hallucinations in silence. | `true` |
+| `--whisper-vad-threshold`| | VAD sensitivity (0.0 to 1.0). Lower is more sensitive. | `0.2` |
+| `--whisper-no-speech-thold`| | No-speech threshold for Whisper probabilistic filtering. | `0.6` |
 | `--subtitle-offset` | | Offset in seconds to apply to all timestamps. | `0.0` |
 | `--whisper-max-len` | | Whisper-specific: Max segment length in characters. | - |
 

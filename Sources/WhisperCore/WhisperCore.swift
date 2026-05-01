@@ -25,6 +25,9 @@ public struct WhisperParams {
     // VAD (Voice Activity Detection) - Requires Silero VAD model
     public var useVAD: Bool = false
     public var vadModelPath: String? = nil
+    public var vadThreshold: Float = 0.5
+    public var vadMinSpeechDurationMs: Int32 = 250
+    public var vadMinSilenceDurationMs: Int32 = 100
     
     public init() {}
 }
@@ -105,6 +108,9 @@ public final class WhisperContext: @unchecked Sendable {
         if let vadPath = params.vadModelPath {
             vadPath.withCString { whisperParams.vad_model_path = $0 }
         }
+        whisperParams.vad_params.threshold = params.vadThreshold
+        whisperParams.vad_params.min_speech_duration_ms = params.vadMinSpeechDurationMs
+        whisperParams.vad_params.min_silence_duration_ms = params.vadMinSilenceDurationMs
         
         if params.language != "auto" {
             params.language.withCString { whisperParams.language = $0 }

@@ -26,6 +26,12 @@ This project is a Swift CLI tool for converting video and audio files into SRT t
    - Shared logic for audio extraction (resampling, ffmpeg integration) is in `Sources/VideoToSrt/Shared/AudioExtractor.swift`.
    - SRT formatting logic is in `Sources/VideoToSrt/Shared/SRTFormatter.swift`.
 
+6. **Hallucination Suppression (Whisper)**:
+   - Whisper is prone to "looping" or hallucinating during silence. We combat this using three layers:
+     - **VAD (Voice Activity Detection)**: Uses Silero VAD to strip silent regions before feeding audio to Whisper. Controlled via `whisper_vad_params`.
+     - **Probabilistic Filtering**: Uses Whisper's `no_speech_thold` to ignore segments with high silence probability.
+     - **RepetitionFilter**: A custom sliding-window filter in `WhisperTranscriptionEngine.swift` that detects and breaks infinite text loops.
+
 ## Workflow
 
 1. **Developing Engines**:

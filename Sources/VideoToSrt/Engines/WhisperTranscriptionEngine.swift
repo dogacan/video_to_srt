@@ -37,10 +37,20 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
     private let logger = Logger(subsystem: "com.video_to_srt", category: "WhisperTranscriptionEngine")
     public let modelPath: String
     public let vadModelPath: String
+    public let useVAD: Bool
+    public let vadThreshold: Float
+    public let noSpeechThold: Float
     private let maxLen: Int?
     private let shouldDownloadIfMissing: Bool
 
-    public init(modelPath: String? = nil, vadModelPath: String? = nil, maxLen: Int? = nil) {
+    public init(
+        modelPath: String? = nil,
+        vadModelPath: String? = nil,
+        useVAD: Bool = true,
+        vadThreshold: Float = 0.2,
+        noSpeechThold: Float = 0.6,
+        maxLen: Int? = nil
+    ) {
         if let providedPath = modelPath, !providedPath.isEmpty {
             self.modelPath = providedPath
             self.shouldDownloadIfMissing = false
@@ -55,6 +65,9 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
             self.vadModelPath = "models/ggml-silero-v6.2.0.bin"
         }
         
+        self.useVAD = useVAD
+        self.vadThreshold = vadThreshold
+        self.noSpeechThold = noSpeechThold
         self.maxLen = maxLen
     }
 
@@ -66,7 +79,9 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     // Bootstrap models if missing and we are using the default paths
                     if shouldDownloadIfMissing {
                         try await ModelDownloader.downloadWhisperModelIfNeeded(to: modelPath)
-                        try await ModelDownloader.downloadVADModelIfNeeded(to: vadModelPath)
+                        if useVAD {
+                            try await ModelDownloader.downloadVADModelIfNeeded(to: vadModelPath)
+                        }
                     }
                     
                     let modelURL = URL(fileURLWithPath: modelPath)
@@ -89,12 +104,16 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     // as a prompt for the next segment. This is the single most
                     // effective setting against the "repeating phrase" problem.
                     params.noContext = true
+                    
+                    // Apply no-speech threshold
+                    params.noSpeechThold = noSpeechThold
 
-                    // Enable VAD if the model exists
-                    if FileManager.default.fileExists(atPath: vadModelPath) {
+                    // Enable VAD if requested and the model exists
+                    if useVAD && FileManager.default.fileExists(atPath: vadModelPath) {
                         logger.info("Enabling VAD using model at \(vadModelPath)...")
                         params.useVAD = true
                         params.vadModelPath = vadModelPath
+                        params.vadThreshold = vadThreshold
                     }
 
                     if let languageCode = options.locale?.language.languageCode?.identifier {
@@ -119,9 +138,8 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     )
                     
                     // Repetition filter — detects and suppresses hallucination loops.
-                    // Relaxed settings: requires more repetitions to trigger, as VAD
-                    // handles the silence-based hallucinations.
-                    let repeatFilter = RepetitionFilter(maxCycleLen: 6, minCycleRepetitions: 3)
+                    // Re-tightened to catch cycles that VAD might miss with the lower threshold.
+                    let repeatFilter = RepetitionFilter(maxCycleLen: 6, minCycleRepetitions: 2)
                     
                     logger.info("Starting Whisper transcription...")
                     
