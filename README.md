@@ -45,10 +45,10 @@ Before running tests, download the required sample media files:
 Then run the automated test suite:
 
 ```bash
-swift test \
-  -Xswiftc -F -Xswiftc /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks \
-  -Xlinker -rpath -Xlinker /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks
+swift test --disable-sandbox
 ```
+
+Note: `--disable-sandbox` is required because the tests execute `ffmpeg` to extract audio from sample files.
 
 ## Requirements
 

@@ -36,14 +36,10 @@ This project is a Swift CLI tool for converting video and audio files into SRT t
 2. **Testing**:
    - Use `Tests/VideoToSrtTests/VideoToSrtTests.swift` for regression testing.
    - When resolving paths in tests, use `#filePath` instead of `#file` to ensure absolute path resolution in Swift 6.
-   - Running tests requires some specific flags. Example command:
-```
-swift test --disable-sandbox \
-  -Xswiftc -F -Xswiftc /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks \
-  -Xlinker -rpath -Xlinker /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks
-```
-   - Before running tests, ensure test data is downloaded by running:
+   - Running tests requires `--disable-sandbox` because the audio extractor executes `ffmpeg` via `Process`.
+   - **Note**: We've added `swift-testing` as a package dependency to ensure compatibility with environments using `CommandLineTools` (where the system `Testing.framework` might not be in the search path).
+   - Example command:
 ```bash
 ./scripts/download_test_data.sh
+swift test --disable-sandbox
 ```
-   - Use the `runTranscriptionTest` helper to maintain consistency across engines.
