@@ -11,7 +11,7 @@ struct ResultSegmenterTests {
     }
 
     @Test func testSegmentCombining() {
-        var segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
         
         // 1. Add a short segment
         let res1 = segmenter.process(segment: MockSegment(transcriptionText: "Hello", transcriptionStartTime: 0.0, transcriptionEndTime: 2.0))
@@ -28,7 +28,7 @@ struct ResultSegmenterTests {
     }
     
     @Test func testFlushBeforeCombine() {
-        var segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
         
         // Add 4s segment
         _ = segmenter.process(segment: MockSegment(transcriptionText: "Start", transcriptionStartTime: 0.0, transcriptionEndTime: 4.0))
@@ -51,7 +51,7 @@ struct ResultSegmenterTests {
     }
     
     @Test func testSingleLongSegment() {
-        var segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
         
         // A single 10s segment should be flushed immediately.
         let results = segmenter.process(segment: MockSegment(transcriptionText: "Long", transcriptionStartTime: 0.0, transcriptionEndTime: 10.0))
@@ -61,7 +61,7 @@ struct ResultSegmenterTests {
     }
 
     @Test func testMultipleFlushesInOneProcess() {
-        var segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
         
         // Add 4s segment
         _ = segmenter.process(segment: MockSegment(transcriptionText: "Start", transcriptionStartTime: 0.0, transcriptionEndTime: 4.0))
