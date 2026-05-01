@@ -21,6 +21,10 @@ public struct WhisperParams {
     public var noSpeechThold: Float = 0.6        // if no-speech prob exceeds this, treat segment as silence
     public var noContext: Bool = false            // don't use previous text as prompt (breaks hallucination loops)
     public var suppressBlank: Bool = true         // suppress blank outputs at the start of sampling
+
+    // VAD (Voice Activity Detection) - Requires Silero VAD model
+    public var useVAD: Bool = false
+    public var vadModelPath: String? = nil
     
     public init() {}
 }
@@ -95,6 +99,12 @@ public final class WhisperContext: @unchecked Sendable {
         whisperParams.no_speech_thold = params.noSpeechThold
         whisperParams.no_context = params.noContext
         whisperParams.suppress_blank = params.suppressBlank
+
+        // VAD parameters
+        whisperParams.vad = params.useVAD
+        if let vadPath = params.vadModelPath {
+            vadPath.withCString { whisperParams.vad_model_path = $0 }
+        }
         
         if params.language != "auto" {
             params.language.withCString { whisperParams.language = $0 }

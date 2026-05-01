@@ -50,6 +50,14 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .long,
+        help: """
+              Absolute path to the whisper VAD model file (e.g. ggml-silero-v6.2.0.bin).
+              """
+    )
+    var whisperVadPath: String?
+
+    @Option(
+        name: .long,
         help: "Offset in seconds to apply to all subtitle timestamps (e.g., 0.5 to delay, -0.5 to advance). Default: 0.0"
     )
     var subtitleOffset: Double = 0.0
@@ -80,7 +88,11 @@ struct VideoToSrt: AsyncParsableCommand {
         case "apple":
             transcriptionEngine = AppleTranscriptionEngine()
         case "whisper":
-            transcriptionEngine = WhisperTranscriptionEngine(modelPath: whisperModelPath, maxLen: whisperMaxLen)
+            transcriptionEngine = WhisperTranscriptionEngine(
+                modelPath: whisperModelPath,
+                vadModelPath: whisperVadPath,
+                maxLen: whisperMaxLen
+            )
         default:
             print("Error: Unknown engine '\(engine)'. Use 'apple' or 'whisper'.")
             throw ExitCode.failure

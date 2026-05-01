@@ -36,10 +36,11 @@ public enum WhisperTranscriptionError: Error, LocalizedError {
 public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
     private let logger = Logger(subsystem: "com.video_to_srt", category: "WhisperTranscriptionEngine")
     public let modelPath: String
+    public let vadModelPath: String
     private let maxLen: Int?
     private let shouldDownloadIfMissing: Bool
 
-    public init(modelPath: String? = nil, maxLen: Int? = nil) {
+    public init(modelPath: String? = nil, vadModelPath: String? = nil, maxLen: Int? = nil) {
         if let providedPath = modelPath, !providedPath.isEmpty {
             self.modelPath = providedPath
             self.shouldDownloadIfMissing = false
@@ -47,6 +48,13 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
             self.modelPath = "models/ggml-base.bin"
             self.shouldDownloadIfMissing = true
         }
+        
+        if let providedVadPath = vadModelPath, !providedVadPath.isEmpty {
+            self.vadModelPath = providedVadPath
+        } else {
+            self.vadModelPath = "models/ggml-silero-v6.2.0.bin"
+        }
+        
         self.maxLen = maxLen
     }
 
@@ -55,9 +63,10 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
             Task {
                 var whisper: WhisperContext? = nil
                 do {
-                    // Bootstrap model if missing and we are using the default path
+                    // Bootstrap models if missing and we are using the default paths
                     if shouldDownloadIfMissing {
-                        try await ModelDownloader.downloadIfNeeded(to: modelPath)
+                        try await ModelDownloader.downloadWhisperModelIfNeeded(to: modelPath)
+                        try await ModelDownloader.downloadVADModelIfNeeded(to: vadModelPath)
                     }
                     
                     let modelURL = URL(fileURLWithPath: modelPath)
@@ -81,6 +90,13 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     // effective setting against the "repeating phrase" problem.
                     params.noContext = true
 
+                    // Enable VAD if the model exists
+                    if FileManager.default.fileExists(atPath: vadModelPath) {
+                        logger.info("Enabling VAD using model at \(vadModelPath)...")
+                        params.useVAD = true
+                        params.vadModelPath = vadModelPath
+                    }
+
                     if let languageCode = options.locale?.language.languageCode?.identifier {
                         logger.info("Setting Whisper language to \(languageCode)...")
                         params.language = languageCode
@@ -103,9 +119,9 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     )
                     
                     // Repetition filter — detects and suppresses hallucination loops.
-                    // Wrapped in a class because the callback is @Sendable, but
-                    // whisper_full calls it synchronously so this is safe.
-                    let repeatFilter = RepetitionFilter(maxCycleLen: 6, minCycleRepetitions: 2)
+                    // Relaxed settings: requires more repetitions to trigger, as VAD
+                    // handles the silence-based hallucinations.
+                    let repeatFilter = RepetitionFilter(maxCycleLen: 6, minCycleRepetitions: 3)
                     
                     logger.info("Starting Whisper transcription...")
                     
