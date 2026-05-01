@@ -142,6 +142,87 @@ public struct AudioExtractor {
         return m4aURL
     }
 
+    // MARK: - API for Diarization
+
+    /// Extracts and resamples audio to 16kHz WAV for Pyannote Diarization.
+    /// Returns the URL of the temporary WAV file.
+    public static func extractAudioForDiarization(from sourceURL: URL, ffmpegPath: String?) async throws -> URL {
+        try validateSourceURL(sourceURL)
+        
+        let ext = sourceURL.pathExtension.lowercased()
+        
+        if let ffmpeg = ffmpegPath, ext != "wav" {
+            logger.info("Using ffmpeg to extract 16kHz wav audio for diarization...")
+            return try runFFmpegTo16kHzWav(from: sourceURL, ffmpegPath: ffmpeg)
+        } else if isUnsupportedFormat(ext) {
+            throw AudioExtractionError.unsupportedMediaFormat(ext)
+        }
+        
+        // If AVFoundation is supported, we can convert it to WAV.
+        let tempDir = FileManager.default.temporaryDirectory
+        let outputURL = tempDir.appendingPathComponent("video_to_srt_diarization_\(UUID().uuidString).wav")
+        
+        logger.debug("Converting audio file for Diarization using AVFoundation...")
+        let audioFile = try AVAudioFile(forReading: sourceURL)
+        
+        let fileSettings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: targetSampleRate,
+            AVNumberOfChannelsKey: targetChannelCount,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false
+        ]
+        
+        let outputFile = try AVAudioFile(forWriting: outputURL, settings: fileSettings, commonFormat: .pcmFormatFloat32, interleaved: false)
+        let targetFormat = outputFile.processingFormat
+        
+        guard let converter = AVAudioConverter(from: audioFile.processingFormat, to: targetFormat) else {
+            throw AudioExtractionError.conversionFailed("Cannot create AVAudioConverter to 16kHz mono.")
+        }
+        
+        let inputBufferCapacity: AVAudioFrameCount = 32768
+        let ratio = targetSampleRate / audioFile.processingFormat.sampleRate
+        let outputBufferCapacity = AVAudioFrameCount(Double(inputBufferCapacity) * ratio)
+        
+        guard let inputBuffer = AVAudioPCMBuffer(pcmFormat: audioFile.processingFormat, frameCapacity: inputBufferCapacity),
+              let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: outputBufferCapacity) else {
+            throw AudioExtractionError.conversionFailed("Failed to create PCM buffers.")
+        }
+        
+        let hasProvidedInput = Box(false)
+        
+        while audioFile.framePosition < audioFile.length {
+            let framesToRead = min(inputBufferCapacity, AVAudioFrameCount(audioFile.length - audioFile.framePosition))
+            inputBuffer.frameLength = framesToRead
+            try audioFile.read(into: inputBuffer, frameCount: framesToRead)
+            
+            var error: NSError? = nil
+            let status = converter.convert(to: outputBuffer, error: &error) { inNumPackets, outStatus in
+                if hasProvidedInput.value {
+                    outStatus.pointee = .noDataNow
+                    return nil
+                }
+                hasProvidedInput.value = true
+                outStatus.pointee = .haveData
+                return inputBuffer
+            }
+            
+            if status == .error {
+                throw AudioExtractionError.conversionFailed(error?.localizedDescription ?? "Unknown conversion error")
+            }
+            
+            if outputBuffer.frameLength > 0 {
+                try outputFile.write(from: outputBuffer)
+            }
+            
+            hasProvidedInput.value = false
+        }
+        
+        return outputURL
+    }
+
     // MARK: - API for Whisper Engine
 
     /// Extracts and resamples audio to 16kHz, mono, 16-bit PCM for Whisper.
@@ -161,7 +242,8 @@ public struct AudioExtractor {
         let ext = sourceURL.pathExtension.lowercased()
         
         // If we have ffmpeg, use it to convert directly to 16kHz WAV for maximum compatibility.
-        if let ffmpeg = ffmpegPath {
+        // Skip this if the input is already a WAV (e.g. from diarization).
+        if let ffmpeg = ffmpegPath, ext != "wav" {
             logger.info("Using ffmpeg to extract 16kHz mono audio...")
             ffmpegGeneratedURL = try runFFmpegTo16kHzWav(from: sourceURL, ffmpegPath: ffmpeg)
             inputURL = ffmpegGeneratedURL!

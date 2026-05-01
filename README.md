@@ -37,6 +37,9 @@ swift run VideoToSrt --engine whisper --whisper-model-path ./models/ggml-base.bi
 | `--whisper-no-speech-thold`| | No-speech threshold for Whisper probabilistic filtering. | `0.6` |
 | `--subtitle-offset` | | Offset in seconds to apply to all timestamps. | `0.0` |
 | `--whisper-max-len` | | Whisper-specific: Max segment length in characters. | - |
+| `--diarize` | | Enable Pyannote speaker diarization (injects `- ` on speaker changes). | `false` |
+| `--hf-token` | | HuggingFace token for Pyannote model. Or use `HF_TOKEN` env var. | - |
+| `--python-path` | | Path to the Python 3 executable for the Pyannote script. | `/usr/bin/env python3` |
 
 ## Testing
 
@@ -59,3 +62,9 @@ Note: `--disable-sandbox` is required because the tests execute `ffmpeg` to extr
 - Swift 6+
 - macOS 26+
 - FFmpeg (optional, recommended for wide format support)
+
+### Diarization Requirements
+If you wish to use the `--diarize` flag to enable speaker separation, you must also have:
+- **Python 3**
+- **PyTorch** and **pyannote.audio** installed (`pip install torch pyannote.audio huggingface_hub`)
+- A **HuggingFace** account and Access Token (to download the Pyannote models).

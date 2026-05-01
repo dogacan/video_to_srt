@@ -22,16 +22,23 @@ public struct TranscriptionOptions: Sendable {
     /// Optional offset in seconds to apply to subtitle timestamps.
     public var subtitleOffsetSeconds: Double
 
+    // MARK: - Diarization
+
+    /// An optional map of speaker segments used to inject speaker tags (e.g. "- Hello") into the SRT.
+    public var diarizationMap: DiarizationMap?
+
     // MARK: - Initialiser
 
     public init(
         locale: Locale? = nil,
         ffmpegPath: String? = nil,
-        subtitleOffsetSeconds: Double = 0.0
+        subtitleOffsetSeconds: Double = 0.0,
+        diarizationMap: DiarizationMap? = nil
     ) {
         self.locale = locale
         self.ffmpegPath = ffmpegPath
         self.subtitleOffsetSeconds = subtitleOffsetSeconds
+        self.diarizationMap = diarizationMap
     }
 
     // MARK: - Convenience presets

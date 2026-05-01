@@ -87,6 +87,26 @@ struct VideoToSrt: AsyncParsableCommand {
     )
     var whisperMaxLen: Int?
 
+    // MARK: - Diarization
+
+    @Flag(
+        name: .long,
+        help: "Enable speaker diarization using Pyannote (requires python3 and pyannote.audio)."
+    )
+    var diarize: Bool = false
+
+    @Option(
+        name: .long,
+        help: "HuggingFace token for Pyannote model. If omitted, HF_TOKEN environment variable will be used."
+    )
+    var hfToken: String?
+
+    @Option(
+        name: .long,
+        help: "Path to the Python 3 executable to run the Pyannote script. Default: '/usr/bin/env python3'."
+    )
+    var pythonPath: String = "/usr/bin/env python3"
+
     mutating func run() async throws {
         let fileURL = URL(fileURLWithPath: inputPath)
         guard FileManager.default.fileExists(atPath: fileURL.path) else {
@@ -140,7 +160,10 @@ struct VideoToSrt: AsyncParsableCommand {
                 inputURL: fileURL,
                 outputURL: outputURL,
                 engine: transcriptionEngine,
-                options: options
+                options: options,
+                diarize: diarize,
+                hfToken: hfToken,
+                pythonPath: pythonPath
             ) { progress in
                 let percent = Int(progress * 100)
                 let progressString = "\rProgress: \(percent)% transcribed..."

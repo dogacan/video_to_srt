@@ -32,6 +32,13 @@ This project is a Swift CLI tool for converting video and audio files into SRT t
      - **Probabilistic Filtering**: Uses Whisper's `no_speech_thold` to ignore segments with high silence probability.
      - **RepetitionFilter**: A custom sliding-window filter in `WhisperTranscriptionEngine.swift` that detects and breaks infinite text loops.
 
+7. **Speaker Diarization**:
+   - Diarization is implemented via an external Python script (`scripts/diarize.py`) using `pyannote.audio`.
+   - Before executing the transcription engine, the `TranscriptionCoordinator` utilizes `AudioExtractor` to convert any input format to a standard 16kHz `.wav` file.
+   - The coordinator invokes the Python script to produce a JSON map of speakers, which is parsed into a `DiarizationMap`.
+   - The `DiarizationMap` is passed down to engines via `TranscriptionOptions`.
+   - Inside the engines, `ResultSegmenter` consults the map and dynamically injects `- ` at the start of any new subtitle segment where the speaker has changed.
+
 ## Workflow
 
 1. **Developing Engines**:

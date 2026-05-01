@@ -19,11 +19,14 @@ public class ResultSegmenter: @unchecked Sendable {
     private var currentText: String = ""
     private var currentStart: Double?
     private var currentEnd: Double?
+    private var lastSpeaker: String?
+    private let diarizationMap: DiarizationMap?
     public private(set) var segmentCount: Int = 0
     
-    public init(offset: Double, totalDuration: Double) {
+    public init(offset: Double, totalDuration: Double, diarizationMap: DiarizationMap? = nil) {
         self.offset = offset
         self.totalDuration = totalDuration
+        self.diarizationMap = diarizationMap
     }
     
     public func process(segment: any TranscriptionSegment) -> [TranscriptionResult] {
@@ -35,23 +38,40 @@ public class ResultSegmenter: @unchecked Sendable {
         let startSecs = segment.transcriptionStartTime + offset
         let endSecs = segment.transcriptionEndTime + offset
         
-        // 1. Flush before combine if adding this segment would exceed max duration
+        var currentSpeaker: String? = nil
+        if let map = diarizationMap {
+            currentSpeaker = map.speaker(at: startSecs) ?? lastSpeaker
+        }
+        
+        let speakerChanged = currentSpeaker != nil && currentSpeaker != lastSpeaker && lastSpeaker != nil
+        
+        // 1. Flush before combine if adding this segment would exceed max duration, OR if speaker changed
         if let start = currentStart, !currentText.isEmpty {
             let potentialDuration = endSecs - start
-            if potentialDuration > maxSegmentDuration {
+            if potentialDuration > maxSegmentDuration || speakerChanged {
                 if let flushed = flush() {
                     results.append(flushed)
                 }
             }
         }
         
+        // Setup text with speaker prefix if necessary
+        var segmentText = plain
+        if currentSpeaker != nil && currentSpeaker != lastSpeaker {
+            segmentText = "- " + segmentText
+            lastSpeaker = currentSpeaker
+        }
+        
         // 2. Accumulate
         if currentText.isEmpty {
-            currentText = plain
+            currentText = segmentText
             currentStart = startSecs
             currentEnd = endSecs
         } else {
-            currentText += " " + plain
+            // Add a newline if speaker changed but we didn't flush (e.g. within a short segment)
+            // Wait, we DO flush if speakerChanged according to step 1!
+            // But just in case, we concatenate with space
+            currentText += " " + segmentText
             currentEnd = endSecs
         }
         

@@ -134,7 +134,8 @@ public struct WhisperTranscriptionEngine: TranscriptionEngine, Sendable {
                     let totalDuration = Double(frames.count) / 16000.0
                     let segmenter = ResultSegmenter(
                         offset: options.subtitleOffsetSeconds,
-                        totalDuration: totalDuration
+                        totalDuration: totalDuration,
+                        diarizationMap: options.diarizationMap
                     )
                     
                     // Repetition filter — detects and suppresses hallucination loops.
