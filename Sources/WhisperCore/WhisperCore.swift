@@ -13,7 +13,7 @@ public struct WhisperParams {
     public var maxLen: Int32 = 0
     public var tokenTimestamps: Bool = false
     public var splitOnWord: Bool = false
-    public var suppressNST: Bool = true
+    public var suppressNST: Bool = false
     
     // Anti-hallucination parameters
     public var entropyThold: Float = 2.4        // segments with entropy above this are considered failed
@@ -28,7 +28,10 @@ public struct WhisperParams {
     public var vadThreshold: Float = 0.5
     public var vadMinSpeechDurationMs: Int32 = 250
     public var vadMinSilenceDurationMs: Int32 = 100
-    
+
+    // Experimental diarization
+    public var useExperimentalDiarization: Bool = false
+
     public init() {}
 }
 
@@ -102,6 +105,9 @@ public final class WhisperContext: @unchecked Sendable {
         whisperParams.no_speech_thold = params.noSpeechThold
         whisperParams.no_context = params.noContext
         whisperParams.suppress_blank = params.suppressBlank
+
+        // Experimental diarization
+        whisperParams.tdrz_enable = params.useExperimentalDiarization
 
         // VAD parameters
         whisperParams.vad = params.useVAD

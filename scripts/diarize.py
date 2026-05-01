@@ -4,11 +4,68 @@ import argparse
 import json
 import os
 import sys
+import warnings
+
+warnings.filterwarnings("ignore")
 
 import huggingface_hub
+
+# huggingface_hub >= 0.27.0 removed use_auth_token. Pyannote still passes it.
+# We monkey-patch it to avoid the crash.
+def _patch_hf_hub():
+    # List of functions that might still be using use_auth_token in older pyannote versions
+    for func_name in ['hf_hub_download', 'snapshot_download']:
+        if not hasattr(huggingface_hub, func_name):
+            continue
+        orig_func = getattr(huggingface_hub, func_name)
+        def make_patched(orig):
+            def patched(*args, **kwargs):
+                if 'use_auth_token' in kwargs:
+                    token = kwargs.pop('use_auth_token')
+                    if token is not False and token is not None:
+                        kwargs['token'] = token
+                return orig(*args, **kwargs)
+            return patched
+        setattr(huggingface_hub, func_name, make_patched(orig_func))
+
+_patch_hf_hub()
+
 from pyannote.audio import Pipeline
 import torch
 
+def setup_torch_safety():
+    # PyTorch 2.6+ defaults to weights_only=True which can break pyannote loading
+    if hasattr(torch.serialization, 'add_safe_globals'):
+        safe_globals = []
+        if hasattr(torch, 'torch_version'):
+            safe_globals.append(torch.torch_version.TorchVersion)
+        
+        try:
+            from pyannote.audio.core.task import Specifications, Problem, Resolution
+            safe_globals.extend([Specifications, Problem, Resolution])
+        except ImportError:
+            pass
+
+        try:
+            from pyannote.core import Annotation, Segment, Timeline
+            safe_globals.extend([Annotation, Segment, Timeline])
+        except ImportError:
+            pass
+
+        try:
+            import numpy
+            # Common numpy types found in torch checkpoints
+            multiarray = getattr(numpy, '_core', getattr(numpy, 'core', None)).multiarray
+            safe_globals.extend([
+                numpy.dtype,
+                multiarray._reconstruct,
+                numpy.ndarray
+            ])
+        except (ImportError, AttributeError):
+            pass
+            
+        if safe_globals:
+            torch.serialization.add_safe_globals(safe_globals)
 
 def main():
     parser = argparse.ArgumentParser(description="Run pyannote speaker diarization.")
@@ -21,54 +78,8 @@ def main():
     if not hf_token:
         print("Error: HF_TOKEN environment variable is not set.", file=sys.stderr)
         sys.exit(1)
-    try:
-        # huggingface_hub >= 0.27.0 removed use_auth_token. Pyannote still passes it.
-        # We monkey-patch it to avoid the crash.
-        _orig_hf_hub_download = huggingface_hub.hf_hub_download
-        def _patched_hf_hub_download(*args, **kwargs):
-            if 'use_auth_token' in kwargs:
-                token = kwargs.pop('use_auth_token')
-                if token is not False and token is not None:
-                    kwargs['token'] = token
-            return _orig_hf_hub_download(*args, **kwargs)
-        huggingface_hub.hf_hub_download = _patched_hf_hub_download
 
-        # PyTorch 2.6+ defaults to weights_only=True which can break pyannote loading
-        if hasattr(torch.serialization, 'add_safe_globals'):
-            safe_globals = []
-            if hasattr(torch, 'torch_version'):
-                safe_globals.append(torch.torch_version.TorchVersion)
-            
-            try:
-                from pyannote.audio.core.task import Specifications, Problem, Resolution
-                safe_globals.extend([Specifications, Problem, Resolution])
-            except ImportError:
-                pass
-
-            try:
-                from pyannote.core import Annotation, Segment, Timeline
-                safe_globals.extend([Annotation, Segment, Timeline])
-            except ImportError:
-                pass
-
-            try:
-                import numpy
-                # Common numpy types found in torch checkpoints
-                multiarray = getattr(numpy, '_core', getattr(numpy, 'core', None)).multiarray
-                safe_globals.extend([
-                    numpy.dtype,
-                    multiarray._reconstruct,
-                    numpy.ndarray
-                ])
-            except (ImportError, AttributeError):
-                pass
-                
-            if safe_globals:
-                torch.serialization.add_safe_globals(safe_globals)
-            
-    except ImportError:
-        print("Error: pyannote.audio or torch or huggingface_hub is not installed.", file=sys.stderr)
-        sys.exit(1)
+    setup_torch_safety()
 
     print(f"Loading pyannote pipeline...", file=sys.stderr)
     try:
