@@ -60,6 +60,10 @@ public struct TranscriptionCoordinator {
             let scriptURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("scripts/diarize.py")
             
             let process = Process()
+            // Provide a pipe to stdin so the python script can detect if Swift dies (Ctrl-C)
+            let stdinPipe = Pipe()
+            process.standardInput = stdinPipe
+            
             if pythonPath == "/usr/bin/env python3" {
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
                 process.arguments = ["python3", scriptURL.path, wavURL.path, tempJSONURL.path]
