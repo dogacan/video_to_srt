@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import sys
+import threading
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -67,6 +68,20 @@ def setup_torch_safety():
         if safe_globals:
             torch.serialization.add_safe_globals(safe_globals)
 
+def setup_parent_monitoring():
+    # If the parent process (Swift) dies unexpectedly, its pipe to our stdin will break.
+    # This daemon thread waits for that EOF and then cleanly exits python to prevent orphaned processes.
+    if sys.stdin.isatty():
+        return
+    def monitor():
+        try:
+            sys.stdin.read()
+        except Exception:
+            pass
+        os._exit(1)
+    
+    threading.Thread(target=monitor, daemon=True).start()
+
 def main():
     parser = argparse.ArgumentParser(description="Run pyannote speaker diarization.")
     parser.add_argument("audio_path", help="Path to the input 16kHz WAV file.")
@@ -80,6 +95,7 @@ def main():
         sys.exit(1)
 
     setup_torch_safety()
+    setup_parent_monitoring()
 
     print(f"Loading pyannote pipeline...", file=sys.stderr)
     try:
