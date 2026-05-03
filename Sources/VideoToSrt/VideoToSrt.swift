@@ -163,7 +163,7 @@ struct VideoToSrt: AsyncParsableCommand {
                 options: options,
                 diarize: diarize,
                 hfToken: hfToken,
-                pythonPath: pythonPath
+                pythonPath: pythonPath,
             ) { progress in
                 let percent = Int(progress * 100)
                 let progressString = "\rProgress: \(percent)% transcribed..."

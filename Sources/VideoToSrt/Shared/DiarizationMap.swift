@@ -58,4 +58,32 @@ public struct DiarizationMap: Sendable {
         
         return nil
     }
+    
+    /// Returns the speaker who occupies the most time within [from, to].
+    /// This is more accurate than point-in-time lookup because diarization boundaries
+    /// rarely align perfectly with transcription segment boundaries.
+    public func dominantSpeaker(from rangeStart: Double, to rangeEnd: Double) -> String? {
+        guard rangeEnd > rangeStart else { return speaker(at: rangeStart) }
+        
+        var overlapBySpeaker: [String: Double] = [:]
+        
+        for segment in segments {
+            // Calculate overlap between [rangeStart, rangeEnd] and [segment.start, segment.end]
+            let overlapStart = max(rangeStart, segment.start)
+            let overlapEnd = min(rangeEnd, segment.end)
+            let overlap = overlapEnd - overlapStart
+            
+            if overlap > 0 {
+                overlapBySpeaker[segment.speaker, default: 0] += overlap
+            }
+        }
+        
+        // If we found overlapping diarization segments, return the speaker with the most overlap
+        if let dominant = overlapBySpeaker.max(by: { $0.value < $1.value }) {
+            return dominant.key
+        }
+        
+        // Fallback: no diarization segment overlaps this range; use midpoint lookup
+        return speaker(at: (rangeStart + rangeEnd) / 2.0)
+    }
 }

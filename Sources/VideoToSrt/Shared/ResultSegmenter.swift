@@ -40,7 +40,7 @@ public class ResultSegmenter: @unchecked Sendable {
         
         var currentSpeaker: String? = nil
         if let map = diarizationMap {
-            currentSpeaker = map.speaker(at: startSecs) ?? lastSpeaker
+            currentSpeaker = map.dominantSpeaker(from: startSecs, to: endSecs) ?? lastSpeaker
         }
         
         let speakerChanged = lastSpeaker != nil && currentSpeaker != nil && currentSpeaker != lastSpeaker
