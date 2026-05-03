@@ -42,7 +42,6 @@ public struct TranscriptionCoordinator {
             try? fileHandle.close()
         }
 
-        var currentInputURL = inputURL
         var wavURLToDelete: URL? = nil
         defer {
             if let url = wavURLToDelete {
@@ -54,7 +53,6 @@ public struct TranscriptionCoordinator {
             print("\nStarting Pyannote Diarization...")
             let wavURL = try await AudioExtractor.extractAudioForDiarization(from: inputURL, ffmpegPath: finalOptions.ffmpegPath)
             wavURLToDelete = wavURL
-            currentInputURL = wavURL
             
             let tempJSONURL = FileManager.default.temporaryDirectory.appendingPathComponent("diarization_\(UUID().uuidString).json")
             defer { try? FileManager.default.removeItem(at: tempJSONURL) }
@@ -97,7 +95,7 @@ public struct TranscriptionCoordinator {
             print("Diarization complete. Found \(map.segments.count) speaker segments.")
         }
 
-        let stream = engine.transcribe(fileURL: currentInputURL, options: finalOptions)
+        let stream = engine.transcribe(fileURL: inputURL, options: finalOptions)
         
         for try await result in stream {
             if let data = result.srtText.data(using: .utf8) {

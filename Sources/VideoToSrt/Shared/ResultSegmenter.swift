@@ -43,7 +43,7 @@ public class ResultSegmenter: @unchecked Sendable {
             currentSpeaker = map.speaker(at: startSecs) ?? lastSpeaker
         }
         
-        let speakerChanged = currentSpeaker != nil && currentSpeaker != lastSpeaker && lastSpeaker != nil
+        let speakerChanged = lastSpeaker != nil && currentSpeaker != nil && currentSpeaker != lastSpeaker
         
         // 1. Flush before combine if adding this segment would exceed max duration, OR if speaker changed
         if let start = currentStart, !currentText.isEmpty {
@@ -57,9 +57,12 @@ public class ResultSegmenter: @unchecked Sendable {
         
         // Setup text with speaker prefix if necessary
         var segmentText = plain
-        if currentSpeaker != nil && currentSpeaker != lastSpeaker {
-            segmentText = "- " + segmentText
-            lastSpeaker = currentSpeaker
+        if let speaker = currentSpeaker {
+            if lastSpeaker != nil && speaker != lastSpeaker {
+                // Speaker actually changed → prefix with dash
+                segmentText = "- " + segmentText
+            }
+            lastSpeaker = speaker
         }
         
         // 2. Accumulate
