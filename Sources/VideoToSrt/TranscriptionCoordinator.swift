@@ -1,4 +1,5 @@
 import Foundation
+import SpeechVAD
 
 /// The central orchestrator for the transcription process.
 ///
@@ -50,53 +51,73 @@ public struct TranscriptionCoordinator {
         }
         
         if diarize {
-            print("\nStarting Pyannote Diarization...")
-            let wavURL = try await AudioExtractor.extractAudioForDiarization(from: inputURL, ffmpegPath: finalOptions.ffmpegPath)
-            wavURLToDelete = wavURL
-            
-            let tempJSONURL = FileManager.default.temporaryDirectory.appendingPathComponent("diarization_\(UUID().uuidString).json")
-            defer { try? FileManager.default.removeItem(at: tempJSONURL) }
-            
-            let scriptURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("scripts/diarize.py")
-            
-            let process = Process()
-            // Provide a pipe to stdin so the python script can detect if Swift dies (Ctrl-C)
-            let stdinPipe = Pipe()
-            process.standardInput = stdinPipe
-            
-            if pythonPath == "/usr/bin/env python3" {
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-                process.arguments = ["python3", scriptURL.path, wavURL.path, tempJSONURL.path]
-            } else {
-                process.executableURL = URL(fileURLWithPath: pythonPath)
-                process.arguments = [scriptURL.path, wavURL.path, tempJSONURL.path]
-            }
-            
-            var env = ProcessInfo.processInfo.environment
-            if let token = hfToken {
-                env["HF_TOKEN"] = token
-            }
-            process.environment = env
-            
-            try process.run()
-            
-            // Wait for completion (could take a while, maybe log progress if python supports it, but for now just wait)
-            let cancellationTask = Task {
-                while process.isRunning {
-                    if Task.isCancelled { process.terminate(); break }
-                    try? await Task.sleep(nanoseconds: 500_000_000)
+            if let qwenEngine = engine as? Qwen3ASRTranscriptionEngine {
+                print("\nStarting Native Swift Diarization with SpeechVAD...")
+                let audio16k = try await AudioExtractor.extractAudioFloat(from: inputURL, targetSampleRate: 16000.0, ffmpegPath: finalOptions.ffmpegPath)
+                
+                let diarizer = try await DiarizationPipeline.fromPretrained(segModelId: qwenEngine.vadModelId)
+                let speechSegments = diarizer.diarize(audio: audio16k, sampleRate: 16000)
+                
+                let mappedSegments = speechSegments.map { segment in
+                    SpeakerSegment(
+                        start: Double(segment.startTime),
+                        end: Double(segment.endTime),
+                        speaker: "SPEAKER_\(String(format: "%02d", segment.speakerId))"
+                    )
                 }
+                
+                let map = DiarizationMap(segments: mappedSegments)
+                finalOptions.diarizationMap = map
+                print("Native Diarization complete. Found \(map.segments.count) speaker segments.")
+            } else {
+                print("\nStarting Pyannote Diarization...")
+                let wavURL = try await AudioExtractor.extractAudioForDiarization(from: inputURL, ffmpegPath: finalOptions.ffmpegPath)
+                wavURLToDelete = wavURL
+                
+                let tempJSONURL = FileManager.default.temporaryDirectory.appendingPathComponent("diarization_\(UUID().uuidString).json")
+                defer { try? FileManager.default.removeItem(at: tempJSONURL) }
+                
+                let scriptURL = URL(fileURLWithPath: FileManager.default.currentDirectoryPath).appendingPathComponent("scripts/diarize.py")
+                
+                let process = Process()
+                // Provide a pipe to stdin so the python script can detect if Swift dies (Ctrl-C)
+                let stdinPipe = Pipe()
+                process.standardInput = stdinPipe
+                
+                if pythonPath == "/usr/bin/env python3" {
+                    process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+                    process.arguments = ["python3", scriptURL.path, wavURL.path, tempJSONURL.path]
+                } else {
+                    process.executableURL = URL(fileURLWithPath: pythonPath)
+                    process.arguments = [scriptURL.path, wavURL.path, tempJSONURL.path]
+                }
+                
+                var env = ProcessInfo.processInfo.environment
+                if let token = hfToken {
+                    env["HF_TOKEN"] = token
+                }
+                process.environment = env
+                
+                try process.run()
+                
+                // Wait for completion (could take a while, maybe log progress if python supports it, but for now just wait)
+                let cancellationTask = Task {
+                    while process.isRunning {
+                        if Task.isCancelled { process.terminate(); break }
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                    }
+                }
+                process.waitUntilExit()
+                cancellationTask.cancel()
+                
+                if process.terminationStatus != 0 {
+                    throw NSError(domain: "VideoToSrt", code: 2, userInfo: [NSLocalizedDescriptionKey: "Pyannote Diarization failed."])
+                }
+                
+                let map = try DiarizationMap(jsonURL: tempJSONURL)
+                finalOptions.diarizationMap = map
+                print("Diarization complete. Found \(map.segments.count) speaker segments.")
             }
-            process.waitUntilExit()
-            cancellationTask.cancel()
-            
-            if process.terminationStatus != 0 {
-                throw NSError(domain: "VideoToSrt", code: 2, userInfo: [NSLocalizedDescriptionKey: "Pyannote Diarization failed."])
-            }
-            
-            let map = try DiarizationMap(jsonURL: tempJSONURL)
-            finalOptions.diarizationMap = map
-            print("Diarization complete. Found \(map.segments.count) speaker segments.")
         }
 
         let stream = engine.transcribe(fileURL: inputURL, options: finalOptions)

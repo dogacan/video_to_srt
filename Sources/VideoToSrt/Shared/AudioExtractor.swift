@@ -50,7 +50,6 @@ public struct AudioExtractor {
 
     // MARK: - Constants
 
-    private static let targetSampleRate: Double = 16000
     private static let targetChannelCount: UInt32 = 1
     private static let inputBufferCapacity: AVAudioFrameCount = 32768
     private static let unsupportedFormats = ["mkv", "webm", "avi"]
@@ -167,7 +166,7 @@ public struct AudioExtractor {
         
         let fileSettings: [String: Any] = [
             AVFormatIDKey: kAudioFormatLinearPCM,
-            AVSampleRateKey: targetSampleRate,
+            AVSampleRateKey: 16000.0,
             AVNumberOfChannelsKey: targetChannelCount,
             AVLinearPCMBitDepthKey: 16,
             AVLinearPCMIsFloatKey: false,
@@ -183,7 +182,7 @@ public struct AudioExtractor {
         }
         
         let inputBufferCapacity: AVAudioFrameCount = 32768
-        let ratio = targetSampleRate / audioFile.processingFormat.sampleRate
+        let ratio = 16000.0 / audioFile.processingFormat.sampleRate
         let outputBufferCapacity = AVAudioFrameCount(Double(inputBufferCapacity) * ratio)
         
         guard let inputBuffer = AVAudioPCMBuffer(pcmFormat: audioFile.processingFormat, frameCapacity: inputBufferCapacity),
@@ -228,6 +227,14 @@ public struct AudioExtractor {
     /// Extracts and resamples audio to 16kHz, mono, 16-bit PCM for Whisper.
     /// Returns an array of Float32 samples.
     public static func extractAudioForWhisper(from sourceURL: URL, ffmpegPath: String?) async throws -> [Float] {
+        return try await extractAudioFloat(from: sourceURL, targetSampleRate: 16000.0, ffmpegPath: ffmpegPath)
+    }
+
+    // MARK: - API for Float Extraction (Whisper, Qwen, etc.)
+    
+    /// Extracts and resamples audio to the target sample rate, mono, Float32 PCM.
+    /// Returns an array of Float32 samples.
+    public static func extractAudioFloat(from sourceURL: URL, targetSampleRate: Double, ffmpegPath: String?) async throws -> [Float] {
         try validateSourceURL(sourceURL)
         
         var inputURL = sourceURL
@@ -241,11 +248,11 @@ public struct AudioExtractor {
 
         let ext = sourceURL.pathExtension.lowercased()
         
-        // If we have ffmpeg, use it to convert directly to 16kHz WAV for maximum compatibility.
+        // If we have ffmpeg, use it to convert directly to target sample rate WAV for maximum compatibility.
         // Skip this if the input is already a WAV (e.g. from diarization).
         if let ffmpeg = ffmpegPath, ext != "wav" {
-            logger.info("Using ffmpeg to extract 16kHz mono audio...")
-            ffmpegGeneratedURL = try runFFmpegTo16kHzWav(from: sourceURL, ffmpegPath: ffmpeg)
+            logger.info("Using ffmpeg to extract \(targetSampleRate)Hz mono audio...")
+            ffmpegGeneratedURL = try runFFmpegToWav(from: sourceURL, sampleRate: targetSampleRate, ffmpegPath: ffmpeg)
             inputURL = ffmpegGeneratedURL!
         } else if isUnsupportedFormat(ext) {
             throw AudioExtractionError.unsupportedMediaFormat(ext)
@@ -264,7 +271,7 @@ public struct AudioExtractor {
            audioFile.processingFormat.channelCount == targetChannelCount {
             let frameCount = AVAudioFrameCount(audioFile.length)
             guard let buffer = AVAudioPCMBuffer(pcmFormat: audioFile.processingFormat, frameCapacity: frameCount) else {
-                throw AudioExtractionError.conversionFailed("Failed to create buffer for 16kHz audio.")
+                throw AudioExtractionError.conversionFailed("Failed to create buffer for \(targetSampleRate)Hz audio.")
             }
             try audioFile.read(into: buffer)
             if let channelData = buffer.floatChannelData {
@@ -272,9 +279,9 @@ public struct AudioExtractor {
             }
         }
 
-        // Standard path: Convert to 16kHz mono Float32.
+        // Standard path: Convert to targetSampleRate mono Float32.
         guard let converter = AVAudioConverter(from: audioFile.processingFormat, to: targetFormat) else {
-            throw AudioExtractionError.conversionFailed("Cannot create AVAudioConverter to 16kHz mono float.")
+            throw AudioExtractionError.conversionFailed("Cannot create AVAudioConverter to \(targetSampleRate)Hz mono float.")
         }
         
         let frameCount = AVAudioFrameCount(audioFile.length)
@@ -379,12 +386,16 @@ public struct AudioExtractor {
     }
     
     private static func runFFmpegTo16kHzWav(from sourceURL: URL, ffmpegPath: String) throws -> URL {
+        return try runFFmpegToWav(from: sourceURL, sampleRate: 16000.0, ffmpegPath: ffmpegPath)
+    }
+    
+    private static func runFFmpegToWav(from sourceURL: URL, sampleRate: Double, ffmpegPath: String) throws -> URL {
         try validateFFmpegPath(ffmpegPath)
         let tempDir = FileManager.default.temporaryDirectory
         let outputURL = tempDir.appendingPathComponent("video_to_srt_\(UUID().uuidString).wav")
 
-        // Convert to 16kHz, 1 channel, 16-bit PCM WAV.
-        let args = ["-nostdin", "-y", "-i", sourceURL.path, "-vn", "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", outputURL.path]
+        // Convert to target sample rate, 1 channel, 16-bit PCM WAV.
+        let args = ["-nostdin", "-y", "-i", sourceURL.path, "-vn", "-ar", "\(Int(sampleRate))", "-ac", "1", "-c:a", "pcm_s16le", outputURL.path]
         return try executeFFmpeg(executablePath: ffmpegPath, arguments: args, outputURL: outputURL)
     }
 

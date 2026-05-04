@@ -12,7 +12,7 @@ struct VideoToSrt: AsyncParsableCommand {
     @Argument(help: "The path to the audio or video file to transcribe.")
     var inputPath: String
 
-    @Option(name: .shortAndLong, help: "The engine to use for transcription: 'apple' or 'whisper'.")
+    @Option(name: .shortAndLong, help: "The engine to use for transcription: 'apple', 'whisper', or 'qwen'.")
     var engine: String = "apple"
 
     @Option(
@@ -87,6 +87,26 @@ struct VideoToSrt: AsyncParsableCommand {
     )
     var whisperMaxLen: Int?
 
+    // MARK: - Qwen Options
+
+    @Option(
+        name: .long,
+        help: "Qwen-specific: HuggingFace model repo ID for the Qwen3ASR model. Default: 'aufklarer/Qwen3-ASR-0.6B-4bit'"
+    )
+    var qwenModel: String = "aufklarer/Qwen3-ASR-0.6B-4bit"
+
+    @Option(
+        name: .long,
+        help: "Qwen-specific: HuggingFace model repo ID for the Qwen3ForcedAligner model. Default: 'aufklarer/Qwen3-ForcedAligner-0.6B-4bit'"
+    )
+    var qwenAlignerModel: String = "aufklarer/Qwen3-ForcedAligner-0.6B-4bit"
+
+    @Option(
+        name: .long,
+        help: "Qwen-specific: HuggingFace model repo ID for the SpeechVAD model used in diarization. Default: 'aufklarer/SpeechVAD'"
+    )
+    var qwenVadModel: String = "aufklarer/SpeechVAD"
+
     // MARK: - Diarization
 
     @Flag(
@@ -135,8 +155,14 @@ struct VideoToSrt: AsyncParsableCommand {
                 noSpeechThold: whisperNoSpeechThold,
                 maxLen: whisperMaxLen
             )
+        case "qwen":
+            transcriptionEngine = Qwen3ASRTranscriptionEngine(
+                modelId: qwenModel,
+                alignerModelId: qwenAlignerModel,
+                vadModelId: qwenVadModel
+            )
         default:
-            print("Error: Unknown engine '\(engine)'. Use 'apple' or 'whisper'.")
+            print("Error: Unknown engine '\(engine)'. Use 'apple', 'whisper', or 'qwen'.")
             throw ExitCode.failure
         }
 

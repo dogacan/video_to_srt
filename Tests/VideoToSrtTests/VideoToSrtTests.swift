@@ -61,6 +61,29 @@ struct VideoToSrtTests {
         )
     }
 
+    @Test func testE2EGwbColumbiaQwen() async throws {
+        let options = TranscriptionOptions(locale: Locale(identifier: "en"), ffmpegPath: ffmpegPath)
+        // Qwen models download automatically via speech-swift. This is an E2E test.
+        try await runTranscriptionTest(
+            audioName: "gwb_columbia.ogg",
+            srtName: "gwb_columbia.srt",
+            engine: Qwen3ASRTranscriptionEngine(),
+            options: options,
+            matchThreshold: 0.85
+        )
+    }
+
+    @Test func testE2EMicroMachinesQwen() async throws {
+        let options = TranscriptionOptions(locale: Locale(identifier: "en"), ffmpegPath: ffmpegPath)
+        try await runTranscriptionTest(
+            audioName: "micro_machines.wav",
+            srtName: "micro_machines.srt",
+            engine: Qwen3ASRTranscriptionEngine(),
+            options: options,
+            matchThreshold: 0.35
+        )
+    }
+
     private func runTranscriptionTest(
         audioName: String,
         srtName: String,
