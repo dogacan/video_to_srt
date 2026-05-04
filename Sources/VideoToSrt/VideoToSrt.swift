@@ -23,12 +23,6 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .long,
-        help: "WhisperKit-specific: The model to use (e.g. 'large-v3-turbo', 'base'). Default: 'large-v3-turbo'"
-    )
-    var whisperkitModel: String = "large-v3-turbo"
-
-    @Option(
-        name: .long,
         help: """
               BCP-47 locale identifier for the transcription language (e.g. 'en-US', 'fr-FR').
               Defaults to the system locale when omitted.
@@ -48,50 +42,9 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .long,
-        help: """
-              Absolute path to the whisper model file (e.g. ggml-tiny.bin).
-              """
-    )
-    var whisperModelPath: String?
-
-    @Option(
-        name: .long,
-        help: """
-              Absolute path to the whisper VAD model file (e.g. ggml-silero-v6.2.0.bin).
-              """
-    )
-    var whisperVadPath: String?
-
-    @Flag(
-        name: .long,
-        inversion: .prefixedNo,
-        help: "Whisper-specific: Enable Voice Activity Detection (VAD) to suppress hallucinations in silence."
-    )
-    var whisperUseVad: Bool = true
-
-    @Option(
-        name: .long,
-        help: "Whisper-specific: VAD probability threshold (0.0 to 1.0). Lower values are less aggressive. Default: 0.2"
-    )
-    var whisperVadThreshold: Float = 0.2
-
-    @Option(
-        name: .long,
-        help: "Whisper-specific: No-speech probability threshold (0.0 to 1.0). If a segment exceeds this, it is considered silence. Default: 0.6"
-    )
-    var whisperNoSpeechThold: Float = 0.6
-
-    @Option(
-        name: .long,
         help: "Offset in seconds to apply to all subtitle timestamps (e.g., 0.5 to delay, -0.5 to advance). Default: 0.0"
     )
     var subtitleOffset: Double = 0.0
-
-    @Option(
-        name: .long,
-        help: "Whisper-specific: Maximum segment length in characters."
-    )
-    var whisperMaxLen: Int?
 
     // MARK: - Qwen Options
 
@@ -152,17 +105,6 @@ struct VideoToSrt: AsyncParsableCommand {
         switch engine.lowercased() {
         case "apple":
             transcriptionEngine = AppleTranscriptionEngine()
-        case "whisper":
-            transcriptionEngine = WhisperTranscriptionEngine(
-                modelPath: whisperModelPath,
-                vadModelPath: whisperVadPath,
-                useVAD: whisperUseVad,
-                vadThreshold: whisperVadThreshold,
-                noSpeechThold: whisperNoSpeechThold,
-                maxLen: whisperMaxLen
-            )
-        case "whisperkit":
-            transcriptionEngine = WhisperKitTranscriptionEngine(model: whisperkitModel)
         case "qwen":
             transcriptionEngine = Qwen3ASRTranscriptionEngine(
                 modelId: qwenModel,
