@@ -2,8 +2,8 @@ import Foundation
 import Qwen3ASR
 import os
 
-/// Internal wrapper to conform `AlignedWord` to `TranscriptionSegment`.
-private struct QwenWordSegment: TranscriptionSegment {
+/// Internal wrapper to conform `AlignedWord` to `TranscriptionEngineSegment`.
+private struct QwenWordSegment: TranscriptionEngineSegment {
     let word: String
     let start: Double
     let end: Double

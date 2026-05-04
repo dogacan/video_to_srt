@@ -1,6 +1,9 @@
 .DS_Store
 /.build
+.build/
+build/
 /Packages
+.swiftpm
 xcuserdata/
 DerivedData/
 .swiftpm/configuration/registries.json
@@ -15,3 +18,4 @@ Tests/VideoToSrtTests/samples/micro_machines.wav
 *.mp4
 *.mkv
 *.mp3
+VideoToSrt.xcodeproj

@@ -12,7 +12,7 @@ struct VideoToSrt: AsyncParsableCommand {
     @Argument(help: "The path to the audio or video file to transcribe.")
     var inputPath: String
 
-    @Option(name: .shortAndLong, help: "The engine to use for transcription: 'apple', 'whisper', or 'qwen'.")
+    @Option(name: .shortAndLong, help: "The engine to use for transcription: 'apple', 'whisper', 'whisperkit', or 'qwen'.")
     var engine: String = "apple"
 
     @Option(
@@ -20,6 +20,12 @@ struct VideoToSrt: AsyncParsableCommand {
         help: "Path to write the output SRT file."
     )
     var output: String
+
+    @Option(
+        name: .long,
+        help: "WhisperKit-specific: The model to use (e.g. 'large-v3-turbo', 'base'). Default: 'large-v3-turbo'"
+    )
+    var whisperkitModel: String = "large-v3-turbo"
 
     @Option(
         name: .long,
@@ -91,9 +97,9 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .long,
-        help: "Qwen-specific: HuggingFace model repo ID for the Qwen3ASR model. Default: 'aufklarer/Qwen3-ASR-0.6B-4bit'"
+        help: "Qwen-specific: HuggingFace model repo ID for the Qwen3ASR model. Default: 'aufklarer/Qwen3-ASR-0.6B-MLX-4bit'"
     )
-    var qwenModel: String = "aufklarer/Qwen3-ASR-0.6B-4bit"
+    var qwenModel: String = "aufklarer/Qwen3-ASR-0.6B-MLX-4bit"
 
     @Option(
         name: .long,
@@ -103,9 +109,9 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .long,
-        help: "Qwen-specific: HuggingFace model repo ID for the SpeechVAD model used in diarization. Default: 'aufklarer/SpeechVAD'"
+        help: "Qwen-specific: HuggingFace model repo ID for the SpeechVAD model used in diarization. Default: 'aufklarer/Pyannote-Segmentation-MLX'"
     )
-    var qwenVadModel: String = "aufklarer/SpeechVAD"
+    var qwenVadModel: String = "aufklarer/Pyannote-Segmentation-MLX"
 
     // MARK: - Diarization
 
@@ -155,6 +161,8 @@ struct VideoToSrt: AsyncParsableCommand {
                 noSpeechThold: whisperNoSpeechThold,
                 maxLen: whisperMaxLen
             )
+        case "whisperkit":
+            transcriptionEngine = WhisperKitTranscriptionEngine(model: whisperkitModel)
         case "qwen":
             transcriptionEngine = Qwen3ASRTranscriptionEngine(
                 modelId: qwenModel,
@@ -162,7 +170,7 @@ struct VideoToSrt: AsyncParsableCommand {
                 vadModelId: qwenVadModel
             )
         default:
-            print("Error: Unknown engine '\(engine)'. Use 'apple', 'whisper', or 'qwen'.")
+            print("Error: Unknown engine '\(engine)'. Use 'apple', 'whisper', 'whisperkit', or 'qwen'.")
             throw ExitCode.failure
         }
 

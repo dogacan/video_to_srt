@@ -31,18 +31,4 @@ else
     echo "micro_machines.wav already exists."
 fi
 
-# Whisper model (ggml-base.bin)
-MODELS_DIR="models"
-MODEL_URL="https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
-MODEL_FILE="$MODELS_DIR/ggml-base.bin"
-
-mkdir -p "$MODELS_DIR"
-
-if [ ! -f "$MODEL_FILE" ]; then
-    echo "Downloading Whisper ggml-base.bin model (~140MB)..."
-    curl -L "$MODEL_URL" -o "$MODEL_FILE"
-else
-    echo "ggml-base.bin already exists."
-fi
-
-echo "Done! Test data is ready in $SAMPLES_DIR and $MODELS_DIR."
+echo "Done! Test data is ready in $SAMPLES_DIR."

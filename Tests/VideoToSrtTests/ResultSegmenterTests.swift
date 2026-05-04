@@ -4,7 +4,7 @@ import Foundation
 
 struct ResultSegmenterTests {
     
-    struct MockSegment: TranscriptionSegment {
+    struct MockSegment: TranscriptionEngineSegment {
         var transcriptionText: String
         var transcriptionStartTime: Double
         var transcriptionEndTime: Double

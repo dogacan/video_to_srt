@@ -1,0 +1,15 @@
+name: VideoToSrt
+options:
+  bundleIdPrefix: com.dogacan
+targets:
+  VideoToSrt:
+    type: tool
+    platform: macOS
+    deploymentTarget: "26.0"
+    dependencies:
+      - package: Local
+        product: VideoToSrt
+
+packages:
+  Local:
+    path: .

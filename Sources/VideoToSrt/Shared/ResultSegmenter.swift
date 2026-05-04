@@ -1,7 +1,7 @@
 import Foundation
 
 /// A common protocol for engine-specific transcription results.
-public protocol TranscriptionSegment {
+public protocol TranscriptionEngineSegment {
     var transcriptionText: String { get }
     var transcriptionStartTime: Double { get }
     var transcriptionEndTime: Double { get }
@@ -29,7 +29,7 @@ public class ResultSegmenter: @unchecked Sendable {
         self.diarizationMap = diarizationMap
     }
     
-    public func process(segment: any TranscriptionSegment) -> [TranscriptionResult] {
+    public func process(segment: any TranscriptionEngineSegment) -> [TranscriptionResult] {
         var results: [TranscriptionResult] = []
         
         let plain = segment.transcriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
