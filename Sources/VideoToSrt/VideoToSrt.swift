@@ -12,7 +12,7 @@ struct VideoToSrt: AsyncParsableCommand {
     @Argument(help: "The path to the audio or video file to transcribe.")
     var inputPath: String
 
-    @Option(name: .shortAndLong, help: "The engine to use for transcription: 'apple', 'whisper', 'whisperkit', or 'qwen'.")
+    @Option(name: .shortAndLong, help: "The engine to use for transcription: 'apple' or 'qwen'.")
     var engine: String = "apple"
 
     @Option(
@@ -62,29 +62,17 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .long,
-        help: "Qwen-specific: HuggingFace model repo ID for the SpeechVAD model used in diarization. Default: 'aufklarer/Pyannote-Segmentation-MLX'"
+        help: "HuggingFace model repo ID for the SpeechVAD model used in diarization. Default: 'aufklarer/Pyannote-Segmentation-MLX'"
     )
-    var qwenVadModel: String = "aufklarer/Pyannote-Segmentation-MLX"
+    var vadModel: String = "aufklarer/Pyannote-Segmentation-MLX"
 
     // MARK: - Diarization
 
     @Flag(
         name: .long,
-        help: "Enable speaker diarization using Pyannote (requires python3 and pyannote.audio)."
+        help: "Enable native speaker diarization using SpeechVAD."
     )
     var diarize: Bool = false
-
-    @Option(
-        name: .long,
-        help: "HuggingFace token for Pyannote model. If omitted, HF_TOKEN environment variable will be used."
-    )
-    var hfToken: String?
-
-    @Option(
-        name: .long,
-        help: "Path to the Python 3 executable to run the Pyannote script. Default: '/usr/bin/env python3'."
-    )
-    var pythonPath: String = "/usr/bin/env python3"
 
     mutating func run() async throws {
         let fileURL = URL(fileURLWithPath: inputPath)
@@ -109,10 +97,10 @@ struct VideoToSrt: AsyncParsableCommand {
             transcriptionEngine = Qwen3ASRTranscriptionEngine(
                 modelId: qwenModel,
                 alignerModelId: qwenAlignerModel,
-                vadModelId: qwenVadModel
+                vadModelId: vadModel
             )
         default:
-            print("Error: Unknown engine '\(engine)'. Use 'apple', 'whisper', 'whisperkit', or 'qwen'.")
+            print("Error: Unknown engine '\(engine)'. Use 'apple' or 'qwen'.")
             throw ExitCode.failure
         }
 
@@ -138,8 +126,7 @@ struct VideoToSrt: AsyncParsableCommand {
                 engine: transcriptionEngine,
                 options: options,
                 diarize: diarize,
-                hfToken: hfToken,
-                pythonPath: pythonPath,
+                vadModelId: vadModel
             ) { progress in
                 let percent = Int(progress * 100)
                 let progressString = "\rProgress: \(percent)% transcribed..."
