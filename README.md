@@ -12,17 +12,18 @@ A fast, flexible Swift CLI utility for automatically generating `.srt` transcrip
 ## Usage
 
 ### Using Apple Engine
+
 ```bash
 swift run VideoToSrt --engine apple --output transcription.srt /path/to/video.mp4
 ```
 
 ### Using Qwen3-ASR Engine
+
 Requires manual setup of `mlx.metallib` (see [Qwen Setup](#qwen-setup)).
+
 ```bash
 HF_TOKEN=your_token swift run --disable-sandbox -c release VideoToSrt --engine qwen --output transcription.srt /path/to/video.mp4
 ```
-
-
 
 ## CLI Options
 
@@ -43,16 +44,21 @@ HF_TOKEN=your_token swift run --disable-sandbox -c release VideoToSrt --engine q
 
 To use the `qwen` engine, you must provide a pre-compiled MLX Metal library (`default.metallib`) in the project root. This is currently required because the MLX dependency does not bundle pre-compiled shaders for command-line tools.
 
-1.  **Clone the speech-swift repository:**
+1. **Clone the speech-swift repository:**
+
     ```bash
     git clone https://github.com/soniqo/speech-swift
     cd speech-swift
     ```
-2.  **Build the metallib:**
+
+2. **Build the metallib:**
+
     ```bash
     make build
     ```
-3.  **Copy and rename the resulting file to this project's root:**
+
+3. **Copy and rename the resulting file to this project's root:**
+
     ```bash
     cp build/mlx.metallib /path/to/video_to_srt/default.metallib
     ```
@@ -78,5 +84,3 @@ Note: `--disable-sandbox` is required because the tests execute `ffmpeg` to extr
 - Swift 6+
 - macOS 26+
 - FFmpeg (optional, recommended for wide format support)
-
-
