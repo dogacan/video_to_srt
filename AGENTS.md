@@ -1,8 +1,9 @@
 # VideoToSrt Agent Guidelines
 
-Welcome to the `video_to_srt` project! 
+Welcome to the `video_to_srt` project!
 
 ## Project Overview
+
 This project is a Swift CLI tool for converting video and audio files into SRT transcriptions. It is designed with a **pluggable architecture** to support multiple transcription engines.
 
 ## Architectural Principles
@@ -37,7 +38,7 @@ This project is a Swift CLI tool for converting video and audio files into SRT t
    - Before executing the transcription engine, the `TranscriptionCoordinator` utilizes `AudioExtractor` to convert any input format to a standard 16kHz `.wav` file.
    - The coordinator invokes the Python script to produce a JSON map of speakers, which is parsed into a `DiarizationMap`.
    - The `DiarizationMap` is passed down to engines via `TranscriptionOptions`.
-   - Inside the engines, `ResultSegmenter` consults the map and dynamically injects `- ` at the start of any new subtitle segment where the speaker has changed.
+   - Inside the engines, `ResultSegmenter` consults the map and dynamically injects `-` at the start of any new subtitle segment where the speaker has changed.
 
 ## Workflow
 
@@ -52,6 +53,7 @@ This project is a Swift CLI tool for converting video and audio files into SRT t
    - Running tests requires `--disable-sandbox` because the audio extractor executes `ffmpeg` via `Process`.
    - **Note**: We've added `swift-testing` as a package dependency to ensure compatibility with environments using `CommandLineTools` (where the system `Testing.framework` might not be in the search path).
    - Example command:
+
 ```bash
 ./scripts/download_test_data.sh
 swift test --disable-sandbox
