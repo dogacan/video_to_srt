@@ -1,5 +1,4 @@
 import Foundation
-import SpeechVAD
 
 /// The central orchestrator for the transcription process.
 ///
@@ -44,23 +43,11 @@ public struct TranscriptionCoordinator {
 
 
         if diarize {
-            print("\nStarting Native Swift Diarization with SpeechVAD...")
-            let audio16k = try await AudioExtractor.extractAudioFloat(from: inputURL, targetSampleRate: 16000.0, ffmpegPath: finalOptions.ffmpegPath)
-            
-            let diarizer = try await DiarizationPipeline.fromPretrained(segModelId: vadModelId)
-            let speechSegments = diarizer.diarize(audio: audio16k, sampleRate: 16000)
-            
-            let mappedSegments = speechSegments.map { segment in
-                SpeakerSegment(
-                    start: Double(segment.startTime),
-                    end: Double(segment.endTime),
-                    speaker: "SPEAKER_\(String(format: "%02d", segment.speakerId))"
-                )
-            }
-            
-            let map = DiarizationMap(segments: mappedSegments)
-            finalOptions.diarizationMap = map
-            print("Native Diarization complete. Found \(map.segments.count) speaker segments.")
+            finalOptions.diarizationMap = try await DiarizationRunner.run(
+                inputURL: inputURL,
+                ffmpegPath: finalOptions.ffmpegPath,
+                vadModelId: vadModelId
+            )
         }
 
         let stream = engine.transcribe(fileURL: inputURL, options: finalOptions)

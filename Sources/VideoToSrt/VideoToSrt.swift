@@ -52,13 +52,13 @@ struct VideoToSrt: AsyncParsableCommand {
         name: .long,
         help: "Qwen-specific: HuggingFace model repo ID for the Qwen3ASR model. Default: 'aufklarer/Qwen3-ASR-0.6B-MLX-4bit'"
     )
-    var qwenModel: String = "aufklarer/Qwen3-ASR-0.6B-MLX-4bit"
+    var qwenModel: String = "aufklarer/Qwen3-ASR-1.7B-MLX-4bit"
 
     @Option(
         name: .long,
         help: "Qwen-specific: HuggingFace model repo ID for the Qwen3ForcedAligner model. Default: 'aufklarer/Qwen3-ForcedAligner-0.6B-4bit'"
     )
-    var qwenAlignerModel: String = "aufklarer/Qwen3-ForcedAligner-0.6B-4bit"
+    var qwenAlignerModel: String = "aufklarer/Qwen3-ForcedAligner-0.6B-8bit"
 
     @Option(
         name: .long,
