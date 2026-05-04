@@ -38,7 +38,7 @@ public struct Qwen3ASRTranscriptionEngine: TranscriptionEngine, Sendable {
     public let vadModelId: String
     
     public init(
-        modelId: String = "aufklarer/Qwen3-ASR-0.6B-MLX-4bit",
+        modelId: String = "aufklarer/Qwen3-ASR-1.7B-MLX-4bit",
         alignerModelId: String = "aufklarer/Qwen3-ForcedAligner-0.6B-4bit",
         vadModelId: String = "aufklarer/Pyannote-Segmentation-MLX"
     ) {
