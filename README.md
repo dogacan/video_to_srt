@@ -6,6 +6,7 @@ A fast, flexible Swift CLI utility for automatically generating `.srt` transcrip
 
 - **Pluggable Architecture**: Easily switch between transcription engines.
 - **Apple Speech (macOS)**: Native, on-device transcription leveraging Apple's APIs.
+- **Qwen3-ASR**: State-of-the-art multilingual transcription and forced alignment via MLX.
 - **Whisper**: High-performance transcription using local `.bin` models.
 - **FFmpeg Integration**: Automatic audio extraction and resampling for maximum compatibility.
 
@@ -14,6 +15,12 @@ A fast, flexible Swift CLI utility for automatically generating `.srt` transcrip
 ### Using Apple Engine
 ```bash
 swift run VideoToSrt --engine apple --output transcription.srt /path/to/video.mp4
+```
+
+### Using Qwen3-ASR Engine
+Requires manual setup of `mlx.metallib` (see [Qwen Setup](#qwen-setup)).
+```bash
+HF_TOKEN=your_token swift run --disable-sandbox -c release VideoToSrt --engine qwen --output transcription.srt /path/to/video.mp4
 ```
 
 ### Using Whisper Engine
@@ -26,10 +33,12 @@ swift run VideoToSrt --engine whisper --whisper-model-path ./models/ggml-base.bi
 | Flag | Short | Description | Default |
 | :--- | :--- | :--- | :--- |
 | `<input-path>` | | **(Required)** The path to the audio or video file. | - |
-| `--engine` | `-e` | Transcription engine: `apple` or `whisper`. | `apple` |
+| `--engine` | `-e` | Transcription engine: `apple`, `qwen`, or `whisper`. | `apple` |
 | `--output` | `-o` | **(Required)** Path to write the output SRT file. | - |
 | `--locale` | | BCP-47 locale identifier (e.g., `en-US`, `fr-FR`). | System Locale |
 | `--ffmpeg-path` | | Path to `ffmpeg` executable for unsupported formats. | - |
+| `--qwen-model` | | Qwen3ASR model repo ID (MLX format). | `aufklarer/Qwen3-ASR-0.6B-MLX-4bit` |
+| `--qwen-aligner-model` | | Qwen3 Forced Aligner model repo ID. | `aufklarer/Qwen3-ForcedAligner-0.6B-4bit` |
 | `--whisper-model-path`| | Path to the whisper model file (e.g. `ggml-tiny.bin`). | - |
 | `--whisper-vad-path`  | | Path to the whisper VAD model file. | - |
 | `--whisper-use-vad`   | | Enable VAD to suppress hallucinations in silence. | `true` |
@@ -40,6 +49,24 @@ swift run VideoToSrt --engine whisper --whisper-model-path ./models/ggml-base.bi
 | `--diarize` | | Enable Pyannote speaker diarization (injects `- ` on speaker changes). | `false` |
 | `--hf-token` | | HuggingFace token for Pyannote model. Or use `HF_TOKEN` env var. | - |
 | `--python-path` | | Path to the Python 3 executable for the Pyannote script. | `/usr/bin/env python3` |
+
+## Qwen Setup
+
+To use the `qwen` engine, you must provide a pre-compiled MLX Metal library (`default.metallib`) in the project root. This is currently required because the MLX dependency does not bundle pre-compiled shaders for command-line tools.
+
+1.  **Clone the speech-swift repository:**
+    ```bash
+    git clone https://github.com/soniqo/speech-swift
+    cd speech-swift
+    ```
+2.  **Build the metallib:**
+    ```bash
+    make build
+    ```
+3.  **Copy and rename the resulting file to this project's root:**
+    ```bash
+    cp build/mlx.metallib /path/to/video_to_srt/default.metallib
+    ```
 
 ## Testing
 

@@ -18,4 +18,4 @@ Tests/VideoToSrtTests/samples/micro_machines.wav
 *.mp4
 *.mkv
 *.mp3
-VideoToSrt.xcodeproj
+*.metallib
