@@ -11,7 +11,7 @@ A fast, flexible Swift CLI utility for automatically generating `.srt` transcrip
 
 ## Usage
 
-### Using Apple Engine
+### Using Apple's SpeechTranscriber Engine
 
 ```bash
 swift run VideoToSrt --engine apple --output transcription.srt /path/to/video.mp4
