@@ -9,7 +9,7 @@ public final class SubtitleTranslator {
     }
     
     /// Translates an array of subtitle segments into a target language, keeping timings intact.
-    public func translate(_ segments: [SubtitleSegment], targetLanguageCode: String) async throws -> [SubtitleSegment] {
+    public func translate(_ segments: [SubtitleSegment], sourceLanguageCode: String?, targetLanguageCode: String) async throws -> [SubtitleSegment] {
         if segments.isEmpty { return [] }
         
         // 1. Group segments into sentences
@@ -22,7 +22,7 @@ public final class SubtitleTranslator {
         }
         
         // 3. Translate sentences
-        let translatedSentences = try await engine.translate(sentencesToTranslate, targetLanguageCode: targetLanguageCode)
+        let translatedSentences = try await engine.translate(sentencesToTranslate, sourceLanguageCode: sourceLanguageCode, targetLanguageCode: targetLanguageCode)
         
         // 4. Distribute translated text back into the original segments
         var resultSegments: [SubtitleSegment] = []

@@ -218,6 +218,9 @@ extension VideoToSrt {
         @Option(name: .shortAndLong, help: "The target BCP-47 language code for translation (e.g. 'tr', 'es', 'fr-FR').")
         var targetLocale: String
 
+        @Option(name: .shortAndLong, help: "The source BCP-47 language code of the input subtitles (e.g. 'en'). Defaults to the system locale.")
+        var sourceLocale: String?
+
         @Option(name: .shortAndLong, help: "The output format: 'srt', 'vtt', 'txt', or 'json'. Defaults to the input format.")
         var format: String?
 
@@ -263,7 +266,11 @@ extension VideoToSrt {
 
             let engine = AppleTranslationEngine()
             let translator = SubtitleTranslator(engine: engine)
-            let translatedSegments = try await translator.translate(segments, targetLanguageCode: targetLocale)
+            let translatedSegments = try await translator.translate(
+                segments,
+                sourceLanguageCode: sourceLocale ?? Locale.current.identifier,
+                targetLanguageCode: targetLocale
+            )
 
             print("Writing translated subtitles to \(outputURL.path)...")
             FileManager.default.createFile(atPath: outputURL.path, contents: nil, attributes: nil)

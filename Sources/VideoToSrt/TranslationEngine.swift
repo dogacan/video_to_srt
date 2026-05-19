@@ -3,19 +3,20 @@ import SwiftUI
 import AppKit
 
 public protocol TranslationEngine: Sendable {
-    func translate(_ texts: [String], targetLanguageCode: String) async throws -> [String]
+    func translate(_ texts: [String], sourceLanguageCode: String?, targetLanguageCode: String) async throws -> [String]
 }
 
 public final class AppleTranslationEngine: TranslationEngine, @unchecked Sendable {
     public init() {}
 
-    public func translate(_ texts: [String], targetLanguageCode: String) async throws -> [String] {
+    public func translate(_ texts: [String], sourceLanguageCode: String?, targetLanguageCode: String) async throws -> [String] {
         if texts.isEmpty { return [] }
         
         return try await withCheckedThrowingContinuation { continuation in
             Task { @MainActor in
                 let targetLocale = Locale.Language(languageCode: Locale.LanguageCode(targetLanguageCode))
-                let configuration = TranslationSession.Configuration(target: targetLocale)
+                let sourceLocale = sourceLanguageCode.map { Locale.Language(languageCode: Locale.LanguageCode($0)) }
+                let configuration = TranslationSession.Configuration(source: sourceLocale, target: targetLocale)
                 
                 let window = NSWindow(
                     contentRect: NSRect(x: 0, y: 0, width: 1, height: 1),

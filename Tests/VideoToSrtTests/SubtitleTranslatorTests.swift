@@ -5,7 +5,7 @@ import Foundation
 struct SubtitleTranslatorTests {
 
     final class MockTranslationEngine: TranslationEngine {
-        func translate(_ texts: [String], targetLanguageCode: String) async throws -> [String] {
+        func translate(_ texts: [String], sourceLanguageCode: String?, targetLanguageCode: String) async throws -> [String] {
             // For testing, we mock translation by uppercasing the input sentences.
             return texts.map { $0.uppercased() }
         }
@@ -29,7 +29,7 @@ struct SubtitleTranslatorTests {
         // Group 1: "I AM NOT GOING TO SCHOOL TODAY."
         // Group 2: "IT IS CLOSED."
         
-        let translated = try await translator.translate(segments, targetLanguageCode: "tr")
+        let translated = try await translator.translate(segments, sourceLanguageCode: "en", targetLanguageCode: "tr")
         #expect(translated.count == 3)
         
         // Check timings are preserved
@@ -67,7 +67,7 @@ struct SubtitleTranslatorTests {
             SubtitleSegment(index: 2, text: "Second part after pause", startSeconds: 4.0, endSeconds: 6.0)
         ]
         
-        let translated = try await translator.translate(segments, targetLanguageCode: "fr")
+        let translated = try await translator.translate(segments, sourceLanguageCode: "en", targetLanguageCode: "fr")
         #expect(translated.count == 2)
         
         // Because of the pause, they should have been translated in separate groups,

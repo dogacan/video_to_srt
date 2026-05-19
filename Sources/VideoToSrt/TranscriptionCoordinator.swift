@@ -97,7 +97,11 @@ public struct TranscriptionCoordinator {
             if !segments.isEmpty {
                 let translationEngine = AppleTranslationEngine()
                 let translator = SubtitleTranslator(engine: translationEngine)
-                let translatedSegments = try await translator.translate(segments, targetLanguageCode: targetLang)
+                let translatedSegments = try await translator.translate(
+                    segments,
+                    sourceLanguageCode: finalOptions.locale?.identifier ?? Locale.current.identifier,
+                    targetLanguageCode: targetLang
+                )
                 
                 if targetFormat == .vtt {
                     if let data = "WEBVTT\n\n".data(using: String.Encoding.utf8) {
