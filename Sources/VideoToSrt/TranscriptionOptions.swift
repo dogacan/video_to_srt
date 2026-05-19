@@ -48,6 +48,9 @@ public struct TranscriptionOptions: Sendable {
     /// The minimum number of words required in a subtitle segment before it can be split due to duration.
     public var minWordsPerSegment: Int
 
+    /// Optional target language code to translate the final subtitles into.
+    public var translateToLanguageCode: String?
+
     // MARK: - Initialiser
 
     public init(
@@ -58,7 +61,8 @@ public struct TranscriptionOptions: Sendable {
         format: SubtitleFormat = .srt,
         maxCharactersPerLine: Int = 80,
         maxSegmentDuration: Double = 7.0,
-        minWordsPerSegment: Int = 1
+        minWordsPerSegment: Int = 1,
+        translateToLanguageCode: String? = nil
     ) {
         self.locale = locale
         self.ffmpegPath = ffmpegPath
@@ -68,6 +72,7 @@ public struct TranscriptionOptions: Sendable {
         self.maxCharactersPerLine = maxCharactersPerLine
         self.maxSegmentDuration = maxSegmentDuration
         self.minWordsPerSegment = minWordsPerSegment
+        self.translateToLanguageCode = translateToLanguageCode
     }
 
     // MARK: - Convenience presets

@@ -50,36 +50,90 @@ public struct TranscriptionCoordinator {
             )
         }
 
-        if finalOptions.format == .vtt {
-            if let data = "WEBVTT\n\n".data(using: .utf8) {
-                try fileHandle.write(contentsOf: data)
-            }
-        } else if finalOptions.format == .json {
-            if let data = "[\n".data(using: .utf8) {
-                try fileHandle.write(contentsOf: data)
+        let targetFormat = finalOptions.format
+        if finalOptions.translateToLanguageCode != nil {
+            // Force transcribing engine to output SRT so it's easily parsed
+            finalOptions.format = .srt
+        }
+
+        // Only write headers immediately if NOT translating
+        if finalOptions.translateToLanguageCode == nil {
+            if targetFormat == .vtt {
+                if let data = "WEBVTT\n\n".data(using: String.Encoding.utf8) {
+                    try fileHandle.write(contentsOf: data)
+                }
+            } else if targetFormat == .json {
+                if let data = "[\n".data(using: String.Encoding.utf8) {
+                    try fileHandle.write(contentsOf: data)
+                }
             }
         }
 
         let stream = engine.transcribe(fileURL: inputURL, options: finalOptions)
         var isFirstSegment = true
+        var accumulatedText = ""
         
         for try await result in stream {
-            var textToWrite = result.formattedText
-            if finalOptions.format == .json {
-                if !isFirstSegment {
-                    textToWrite = ",\n" + textToWrite
+            if finalOptions.translateToLanguageCode != nil {
+                accumulatedText += result.formattedText
+            } else {
+                var textToWrite = result.formattedText
+                if targetFormat == .json {
+                    if !isFirstSegment {
+                        textToWrite = ",\n" + textToWrite
+                    }
+                    isFirstSegment = false
                 }
-                isFirstSegment = false
-            }
-            if let data = textToWrite.data(using: .utf8) {
-                try fileHandle.write(contentsOf: data)
+                if let data = textToWrite.data(using: String.Encoding.utf8) {
+                    try fileHandle.write(contentsOf: data)
+                }
             }
             progressHandler(result.progress)
         }
 
-        if finalOptions.format == .json {
-            if let data = "\n]\n".data(using: .utf8) {
-                try fileHandle.write(contentsOf: data)
+        // If translating, translate the accumulated segments and write them to output
+        if let targetLang = finalOptions.translateToLanguageCode {
+            let segments = try SubtitleParser.parse(accumulatedText)
+            if !segments.isEmpty {
+                let translationEngine = AppleTranslationEngine()
+                let translator = SubtitleTranslator(engine: translationEngine)
+                let translatedSegments = try await translator.translate(segments, targetLanguageCode: targetLang)
+                
+                if targetFormat == .vtt {
+                    if let data = "WEBVTT\n\n".data(using: String.Encoding.utf8) {
+                        try fileHandle.write(contentsOf: data)
+                    }
+                } else if targetFormat == .json {
+                    if let data = "[\n".data(using: String.Encoding.utf8) {
+                        try fileHandle.write(contentsOf: data)
+                    }
+                }
+
+                var isFirstTranslated = true
+                for segment in translatedSegments {
+                    var textToWrite = SubtitleFormatter.format(segment, format: targetFormat)
+                    if targetFormat == .json {
+                        if !isFirstTranslated {
+                            textToWrite = ",\n" + textToWrite
+                        }
+                        isFirstTranslated = false
+                    }
+                    if let data = textToWrite.data(using: String.Encoding.utf8) {
+                        try fileHandle.write(contentsOf: data)
+                    }
+                }
+
+                if targetFormat == .json {
+                    if let data = "\n]\n".data(using: String.Encoding.utf8) {
+                        try fileHandle.write(contentsOf: data)
+                    }
+                }
+            }
+        } else {
+            if targetFormat == .json {
+                if let data = "\n]\n".data(using: String.Encoding.utf8) {
+                    try fileHandle.write(contentsOf: data)
+                }
             }
         }
     }

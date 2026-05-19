@@ -46,6 +46,15 @@ HF_TOKEN=your_token swift run --disable-sandbox -c release VideoToSrt --engine q
 | `--diarize` | | Enable native SpeechVAD speaker diarization. | `false` |
 | `--vad-model` | | HuggingFace model repo ID for SpeechVAD model. | `aufklarer/Pyannote-Segmentation-MLX` |
 
+## Translation
+
+The translation features (both translating on-the-fly during transcription and translating existing subtitle files) utilize Apple's native on-device Translation framework.
+
+> [!IMPORTANT]
+> **On-Device Translation Requirements**:
+> - **Offline Access**: If the target language models are already downloaded on your Mac (configured via *System Settings -> General -> Language & Region -> Translation -> Downloaded Languages*), translation runs 100% offline.
+> - **GUI Permission Prompt**: If the required language model is missing, the OS will attempt to display a graphical permission sheet to prompt for the download. This requires the CLI tool to be run inside a GUI user session.
+
 ## Qwen Setup
 
 To use the `qwen` engine, you must provide a pre-compiled MLX Metal library (`default.metallib`) in the project root. This is currently required because the MLX dependency does not bundle pre-compiled shaders for command-line tools.
