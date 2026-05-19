@@ -17,9 +17,27 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .shortAndLong,
-        help: "Path to write the output SRT file."
+        help: "Path to write the output subtitle file. Defaults to <input file without extension>.<format>"
     )
-    var output: String
+    var output: String?
+
+    @Option(
+        name: .shortAndLong,
+        help: "The output format: 'srt', 'vtt', 'txt', or 'json'. Default: 'srt'"
+    )
+    var format: String = "srt"
+
+    @Option(
+        name: .long,
+        help: "The maximum number of characters allowed per subtitle segment line. Default: 80"
+    )
+    var maxCpl: Int = 80
+
+    @Option(
+        name: .long,
+        help: "The maximum duration in seconds allowed for a single subtitle segment. Default: 7.0"
+    )
+    var maxDuration: Double = 7.0
 
     @Option(
         name: .long,
@@ -104,10 +122,18 @@ struct VideoToSrt: AsyncParsableCommand {
             throw ExitCode.failure
         }
 
+        guard let subFormat = SubtitleFormat(rawValue: format.lowercased()) else {
+            print("Error: Unknown format '\(format)'. Use 'srt', 'vtt', 'txt', or 'json'.")
+            throw ExitCode.failure
+        }
+
         let options = TranscriptionOptions(
             locale: locale.map { Locale(identifier: $0) },
             ffmpegPath: ffmpegPath,
-            subtitleOffsetSeconds: subtitleOffset
+            subtitleOffsetSeconds: subtitleOffset,
+            format: subFormat,
+            maxCharactersPerLine: maxCpl,
+            maxSegmentDuration: maxDuration
         )
 
         print("Using engine: \(engine)")
@@ -116,7 +142,14 @@ struct VideoToSrt: AsyncParsableCommand {
         }
         print("Transcribing \(fileURL.lastPathComponent)...")
 
-        let outputURL = URL(fileURLWithPath: output)
+        let outputURL: URL
+        if let out = output {
+            outputURL = URL(fileURLWithPath: out)
+        } else {
+            let baseName = fileURL.deletingPathExtension().lastPathComponent
+            let outputDirectory = fileURL.deletingLastPathComponent()
+            outputURL = outputDirectory.appendingPathComponent("\(baseName).\(subFormat.rawValue)")
+        }
 
         do {
             let coordinator = TranscriptionCoordinator()
@@ -140,6 +173,6 @@ struct VideoToSrt: AsyncParsableCommand {
             throw ExitCode.failure
         }
 
-        print("SRT written to \(outputURL.path)")
+        print("Subtitles written to \(outputURL.path)")
     }
 }

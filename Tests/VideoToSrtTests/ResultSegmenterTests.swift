@@ -11,7 +11,7 @@ struct ResultSegmenterTests {
     }
 
     @Test func testSegmentCombining() {
-        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100, options: .default)
         
         // 1. Add a short segment
         let res1 = segmenter.process(segment: MockSegment(transcriptionText: "Hello", transcriptionStartTime: 0.0, transcriptionEndTime: 2.0))
@@ -24,11 +24,11 @@ struct ResultSegmenterTests {
         // 3. Add punctuation to flush
         let res3 = segmenter.process(segment: MockSegment(transcriptionText: "!", transcriptionStartTime: 4.0, transcriptionEndTime: 4.1))
         #expect(res3.count == 1)
-        #expect(res3[0].srtText.contains("Hello world !"))
+        #expect(res3[0].formattedText.contains("Hello world !"))
     }
     
     @Test func testFlushBeforeCombine() {
-        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100, options: .default)
         
         // Add 4s segment
         _ = segmenter.process(segment: MockSegment(transcriptionText: "Start", transcriptionStartTime: 0.0, transcriptionEndTime: 4.0))
@@ -38,30 +38,30 @@ struct ResultSegmenterTests {
         let results = segmenter.process(segment: MockSegment(transcriptionText: "Next", transcriptionStartTime: 4.0, transcriptionEndTime: 8.0))
         
         #expect(results.count == 1)
-        #expect(results[0].srtText.contains("00:00:00,000 --> 00:00:04,000"))
-        #expect(results[0].srtText.contains("Start"))
+        #expect(results[0].formattedText.contains("00:00:00,000 --> 00:00:04,000"))
+        #expect(results[0].formattedText.contains("Start"))
         
         // Flush remaining
         if let final = segmenter.flush() {
-            #expect(final.srtText.contains("00:00:04,000 --> 00:00:08,000"))
-            #expect(final.srtText.contains("Next"))
+            #expect(final.formattedText.contains("00:00:04,000 --> 00:00:08,000"))
+            #expect(final.formattedText.contains("Next"))
         } else {
             Issue.record("Expected final segment to be non-nil")
         }
     }
     
     @Test func testSingleLongSegment() {
-        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100, options: .default)
         
         // A single 10s segment should be flushed immediately.
         let results = segmenter.process(segment: MockSegment(transcriptionText: "Long", transcriptionStartTime: 0.0, transcriptionEndTime: 10.0))
         
         #expect(results.count == 1)
-        #expect(results[0].srtText.contains("00:00:00,000 --> 00:00:10,000"))
+        #expect(results[0].formattedText.contains("00:00:00,000 --> 00:00:10,000"))
     }
 
     @Test func testMultipleFlushesInOneProcess() {
-        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100, options: .default)
         
         // Add 4s segment
         _ = segmenter.process(segment: MockSegment(transcriptionText: "Start", transcriptionStartTime: 0.0, transcriptionEndTime: 4.0))
@@ -72,7 +72,24 @@ struct ResultSegmenterTests {
         let results = segmenter.process(segment: MockSegment(transcriptionText: "Very long addition", transcriptionStartTime: 4.0, transcriptionEndTime: 12.0))
         
         #expect(results.count == 2)
-        #expect(results[0].srtText.contains("00:00:00,000 --> 00:00:04,000"))
-        #expect(results[1].srtText.contains("00:00:04,000 --> 00:00:12,000"))
+        #expect(results[0].formattedText.contains("00:00:00,000 --> 00:00:04,000"))
+        #expect(results[1].formattedText.contains("00:00:04,000 --> 00:00:12,000"))
+    }
+
+    @Test func testCustomLayoutConstraints() {
+        let options = TranscriptionOptions(maxCharactersPerLine: 10, maxSegmentDuration: 3.0)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100, options: options)
+
+        // 1. Check max duration limit (3.0s)
+        // Add a 4.0s segment, it should flush immediately because 4.0s > 3.0s limit
+        let res1 = segmenter.process(segment: MockSegment(transcriptionText: "Short", transcriptionStartTime: 0.0, transcriptionEndTime: 4.0))
+        #expect(res1.count == 1)
+        #expect(res1[0].formattedText.contains("Short"))
+
+        // 2. Check max CPL limit (10 characters)
+        // Add a 2s segment with a 15-char string, it should flush immediately because 15 > 10 CPL
+        let res2 = segmenter.process(segment: MockSegment(transcriptionText: "HelloVeryLongWord", transcriptionStartTime: 4.0, transcriptionEndTime: 6.0))
+        #expect(res2.count == 1)
+        #expect(res2[0].formattedText.contains("HelloVeryLongWord"))
     }
 }

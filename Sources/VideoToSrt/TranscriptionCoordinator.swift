@@ -50,13 +50,37 @@ public struct TranscriptionCoordinator {
             )
         }
 
+        if finalOptions.format == .vtt {
+            if let data = "WEBVTT\n\n".data(using: .utf8) {
+                try fileHandle.write(contentsOf: data)
+            }
+        } else if finalOptions.format == .json {
+            if let data = "[\n".data(using: .utf8) {
+                try fileHandle.write(contentsOf: data)
+            }
+        }
+
         let stream = engine.transcribe(fileURL: inputURL, options: finalOptions)
+        var isFirstSegment = true
         
         for try await result in stream {
-            if let data = result.srtText.data(using: .utf8) {
+            var textToWrite = result.formattedText
+            if finalOptions.format == .json {
+                if !isFirstSegment {
+                    textToWrite = ",\n" + textToWrite
+                }
+                isFirstSegment = false
+            }
+            if let data = textToWrite.data(using: .utf8) {
                 try fileHandle.write(contentsOf: data)
             }
             progressHandler(result.progress)
+        }
+
+        if finalOptions.format == .json {
+            if let data = "\n]\n".data(using: .utf8) {
+                try fileHandle.write(contentsOf: data)
+            }
         }
     }
 }

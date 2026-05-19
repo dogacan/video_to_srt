@@ -1,11 +1,11 @@
 import Foundation
 
 public struct TranscriptionResult: Sendable {
-    public let srtText: String
+    public let formattedText: String
     public let progress: Double
 
-    public init(srtText: String, progress: Double) {
-        self.srtText = srtText
+    public init(formattedText: String, progress: Double) {
+        self.formattedText = formattedText
         self.progress = progress
     }
 }

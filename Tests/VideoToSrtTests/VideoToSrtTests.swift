@@ -69,7 +69,7 @@ struct VideoToSrtTests {
         let stream = engine.transcribe(fileURL: audioURL, options: testOptions)
         
         for try await result in stream {
-            transcript += result.srtText
+            transcript += result.formattedText
         }
         
         // Normalize and compare content-only with some tolerance for non-deterministic speech recognition jitter.

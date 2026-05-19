@@ -1,5 +1,12 @@
 import Foundation
 
+public enum SubtitleFormat: String, CaseIterable, Sendable {
+    case srt
+    case vtt
+    case txt
+    case json
+}
+
 /// Engine-agnostic options that control transcription behaviour.
 ///
 /// Pass a value of this type to ``TranscriptionEngine/transcribe(fileURL:options:)``.
@@ -27,18 +34,35 @@ public struct TranscriptionOptions: Sendable {
     /// An optional map of speaker segments used to inject speaker tags (e.g. "- Hello") into the SRT.
     public var diarizationMap: DiarizationMap?
 
+    // MARK: - Layout & Output Format
+
+    /// The desired output format of the subtitles/transcription.
+    public var format: SubtitleFormat
+
+    /// The maximum number of characters allowed per subtitle segment line.
+    public var maxCharactersPerLine: Int
+
+    /// The maximum duration (in seconds) allowed for a single subtitle segment.
+    public var maxSegmentDuration: Double
+
     // MARK: - Initialiser
 
     public init(
         locale: Locale? = nil,
         ffmpegPath: String? = nil,
         subtitleOffsetSeconds: Double = 0.0,
-        diarizationMap: DiarizationMap? = nil
+        diarizationMap: DiarizationMap? = nil,
+        format: SubtitleFormat = .srt,
+        maxCharactersPerLine: Int = 80,
+        maxSegmentDuration: Double = 7.0
     ) {
         self.locale = locale
         self.ffmpegPath = ffmpegPath
         self.subtitleOffsetSeconds = subtitleOffsetSeconds
         self.diarizationMap = diarizationMap
+        self.format = format
+        self.maxCharactersPerLine = maxCharactersPerLine
+        self.maxSegmentDuration = maxSegmentDuration
     }
 
     // MARK: - Convenience presets

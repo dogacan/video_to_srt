@@ -10,7 +10,7 @@ This project is a Swift CLI tool for converting video and audio files into SRT t
 
 1. **Pluggable Engines**:
    - The core interface is the `TranscriptionEngine` protocol located in `Sources/VideoToSrt/TranscriptionEngine.swift`.
-   - All new transcription backends (e.g., Apple Speech, Whisper) MUST implement this protocol.
+   - All new transcription backends (e.g., Apple Speech, Qwen3-ASR) MUST implement this protocol.
    - Place new engine implementations in the `Sources/VideoToSrt/Engines/` directory.
 
 2. **CLI Framework**:
@@ -25,7 +25,7 @@ This project is a Swift CLI tool for converting video and audio files into SRT t
 
 5. **Shared Utilities**:
    - Shared logic for audio extraction (resampling, ffmpeg integration) is in `Sources/VideoToSrt/Shared/AudioExtractor.swift`.
-   - SRT formatting logic is in `Sources/VideoToSrt/Shared/SRTFormatter.swift`.
+   - Subtitle formatting logic (SRT, WebVTT, Plain Text, JSON) is in `Sources/VideoToSrt/Shared/SubtitleFormatter.swift`.
 
 6. **Hallucination Suppression (Whisper)**:
    - Whisper is prone to "looping" or hallucinating during silence. We combat this using three layers:
@@ -34,9 +34,9 @@ This project is a Swift CLI tool for converting video and audio files into SRT t
      - **RepetitionFilter**: A custom sliding-window filter in `WhisperTranscriptionEngine.swift` that detects and breaks infinite text loops.
 
 7. **Speaker Diarization**:
-   - Diarization is implemented via an external Python script (`scripts/diarize.py`) using `pyannote.audio`.
-   - Before executing the transcription engine, the `TranscriptionCoordinator` utilizes `AudioExtractor` to convert any input format to a standard 16kHz `.wav` file.
-   - The coordinator invokes the Python script to produce a JSON map of speakers, which is parsed into a `DiarizationMap`.
+   - Diarization is implemented natively via a Swift VAD model pipeline (using the `SpeechVAD` package).
+   - Before executing the transcription engine, the `TranscriptionCoordinator` utilizes `AudioExtractor` to extract and resample input format audio to standard 16kHz wav PCM float array.
+   - The `DiarizationRunner` invokes `DiarizationPipeline` to produce a list of speech segments and speaker IDs, which are parsed into a `DiarizationMap`.
    - The `DiarizationMap` is passed down to engines via `TranscriptionOptions`.
    - Inside the engines, `ResultSegmenter` consults the map and dynamically injects `-` at the start of any new subtitle segment where the speaker has changed.
 

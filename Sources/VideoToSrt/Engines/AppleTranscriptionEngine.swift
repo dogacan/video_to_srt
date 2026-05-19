@@ -130,7 +130,7 @@ public struct AppleTranscriptionEngine: TranscriptionEngine, Sendable {
             let segmenter = ResultSegmenter(
                 offset: options.subtitleOffsetSeconds,
                 totalDuration: totalDuration,
-                diarizationMap: options.diarizationMap
+                options: options
             )
 
             for try await result in transcriber.results {

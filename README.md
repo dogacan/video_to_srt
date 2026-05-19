@@ -8,13 +8,15 @@ A fast, flexible Swift CLI utility for automatically generating `.srt` transcrip
 - **Apple Speech (macOS)**: Native, on-device transcription leveraging Apple's APIs.
 - **Qwen3-ASR**: State-of-the-art multilingual transcription and forced alignment via MLX.
 - **FFmpeg Integration**: Automatic audio extraction and resampling for maximum compatibility.
+- **Multi-Format Subtitle Output**: Support for SRT, WebVTT (VTT), Plain Text (TXT), and JSON.
+- **Configurable Subtitle Layout Constraints**: Control maximum Characters Per Line (CPL) and maximum duration of segments.
 
 ## Usage
 
-### Using Apple's SpeechTranscriber Engine
+### Using Apple Engine
 
 ```bash
-swift run VideoToSrt --engine apple --output transcription.srt /path/to/video.mp4
+swift run VideoToSrt --engine apple --format vtt /path/to/video.mp4
 ```
 
 ### Using Qwen3-ASR Engine
@@ -22,7 +24,7 @@ swift run VideoToSrt --engine apple --output transcription.srt /path/to/video.mp
 Requires manual setup of `mlx.metallib` (see [Qwen Setup](#qwen-setup)).
 
 ```bash
-HF_TOKEN=your_token swift run --disable-sandbox -c release VideoToSrt --engine qwen --output transcription.srt /path/to/video.mp4
+HF_TOKEN=your_token swift run --disable-sandbox -c release VideoToSrt --engine qwen --format json /path/to/video.mp4
 ```
 
 ## CLI Options
@@ -31,7 +33,10 @@ HF_TOKEN=your_token swift run --disable-sandbox -c release VideoToSrt --engine q
 | :--- | :--- | :--- | :--- |
 | `<input-path>` | | **(Required)** The path to the audio or video file. | - |
 | `--engine` | `-e` | Transcription engine: `apple` or `qwen`. | `apple` |
-| `--output` | `-o` | **(Required)** Path to write the output SRT file. | - |
+| `--output` | `-o` | Path to write the output subtitle file. | `<input-file-without-extension>.<format>` |
+| `--format` | `-f` | Subtitle format: `srt`, `vtt`, `txt`, or `json`. | `srt` |
+| `--max-cpl` | | Maximum characters per line for subtitles. | `80` |
+| `--max-duration`| | Maximum segment duration in seconds. | `7.0` |
 | `--locale` | | BCP-47 locale identifier (e.g., `en-US`, `fr-FR`). | System Locale |
 | `--ffmpeg-path` | | Path to `ffmpeg` executable for unsupported formats. | - |
 | `--qwen-model` | | Qwen3ASR model repo ID (MLX format). | `aufklarer/Qwen3-ASR-0.6B-MLX-4bit` |

@@ -11,8 +11,9 @@ public protocol TranscriptionEngineSegment {
 public class ResultSegmenter: @unchecked Sendable {
     private let offset: Double
     private let totalDuration: Double
-    private let maxSegmentDuration: Double = 7.0
-    private let maxCharactersPerLine: Int = 80
+    private let maxSegmentDuration: Double
+    private let maxCharactersPerLine: Int
+    private let options: TranscriptionOptions
     
     private static let sentenceEndings: Set<Character> = [".", "?", "!", "…"]
 
@@ -23,10 +24,13 @@ public class ResultSegmenter: @unchecked Sendable {
     private let diarizationMap: DiarizationMap?
     public private(set) var segmentCount: Int = 0
     
-    public init(offset: Double, totalDuration: Double, diarizationMap: DiarizationMap? = nil) {
+    public init(offset: Double, totalDuration: Double, options: TranscriptionOptions) {
         self.offset = offset
         self.totalDuration = totalDuration
-        self.diarizationMap = diarizationMap
+        self.options = options
+        self.maxSegmentDuration = options.maxSegmentDuration
+        self.maxCharactersPerLine = options.maxCharactersPerLine
+        self.diarizationMap = options.diarizationMap
     }
     
     public func process(segment: any TranscriptionEngineSegment) -> [TranscriptionResult] {
@@ -94,8 +98,8 @@ public class ResultSegmenter: @unchecked Sendable {
         }
         
         segmentCount += 1
-        let segment = SRTSegment(text: currentText, startSeconds: start, endSeconds: end)
-        let srtText = SRTFormatter.format(segment, index: segmentCount)
+        let segment = SubtitleSegment(index: segmentCount, text: currentText, startSeconds: start, endSeconds: end)
+        let formattedText = SubtitleFormatter.format(segment, format: options.format)
         let progress = totalDuration > 0 ? min(1.0, end / totalDuration) : 0.0
         
         // Reset for next segment
@@ -103,7 +107,7 @@ public class ResultSegmenter: @unchecked Sendable {
         currentStart = nil
         currentEnd = nil
         
-        return TranscriptionResult(srtText: srtText, progress: progress)
+        return TranscriptionResult(formattedText: formattedText, progress: progress)
     }
     
     private func shouldFlush() -> Bool {

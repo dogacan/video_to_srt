@@ -80,7 +80,7 @@ public struct Qwen3ASRTranscriptionEngine: TranscriptionEngine, Sendable {
                     let segmenter = ResultSegmenter(
                         offset: options.subtitleOffsetSeconds,
                         totalDuration: totalDuration,
-                        diarizationMap: options.diarizationMap
+                        options: options
                     )
                     
                     for word in alignedWords {
