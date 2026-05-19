@@ -13,9 +13,11 @@ public class ResultSegmenter: @unchecked Sendable {
     private let totalDuration: Double
     private let maxSegmentDuration: Double
     private let maxCharactersPerLine: Int
+    private let minWordsPerSegment: Int
     private let options: TranscriptionOptions
     
     private static let sentenceEndings: Set<Character> = [".", "?", "!", "…"]
+    private static let clauseBoundaries: Set<Character> = [".", "?", "!", "…", ",", ";", ":"]
 
     private var currentText: String = ""
     private var currentStart: Double?
@@ -30,6 +32,7 @@ public class ResultSegmenter: @unchecked Sendable {
         self.options = options
         self.maxSegmentDuration = options.maxSegmentDuration
         self.maxCharactersPerLine = options.maxCharactersPerLine
+        self.minWordsPerSegment = options.minWordsPerSegment
         self.diarizationMap = options.diarizationMap
     }
     
@@ -52,7 +55,17 @@ public class ResultSegmenter: @unchecked Sendable {
         // 1. Flush before combine if adding this segment would exceed max duration, OR if speaker changed
         if let start = currentStart, !currentText.isEmpty {
             let potentialDuration = endSecs - start
-            if potentialDuration > maxSegmentDuration || speakerChanged {
+            let wordCount = currentText.split(whereSeparator: { $0.isWhitespace }).count
+            var isTooShortToSplit = wordCount < minWordsPerSegment
+            
+            if let lastChar = currentText.last(where: { !$0.isWhitespace }),
+               Self.clauseBoundaries.contains(lastChar) {
+                isTooShortToSplit = false
+            }
+            
+            let shouldFlushDuration = potentialDuration > maxSegmentDuration && !isTooShortToSplit
+            
+            if shouldFlushDuration || speakerChanged {
                 if let flushed = flush() {
                     results.append(flushed)
                 }
@@ -114,7 +127,16 @@ public class ResultSegmenter: @unchecked Sendable {
         guard let start = currentStart, let end = currentEnd else { return false }
         
         let duration = end - start
-        if duration >= maxSegmentDuration { return true }
+        
+        let wordCount = currentText.split(whereSeparator: { $0.isWhitespace }).count
+        var isTooShortToSplit = wordCount < minWordsPerSegment
+        
+        if let lastChar = currentText.last(where: { !$0.isWhitespace }),
+           Self.clauseBoundaries.contains(lastChar) {
+            isTooShortToSplit = false
+        }
+        
+        if duration >= maxSegmentDuration && !isTooShortToSplit { return true }
         if currentText.count >= maxCharactersPerLine { return true }
         
         // Punctuation check - avoid trimming the whole string

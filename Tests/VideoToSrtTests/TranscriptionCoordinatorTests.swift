@@ -38,7 +38,7 @@ struct TranscriptionCoordinatorTests {
         
         let tempDir = FileManager.default.temporaryDirectory
         let inputURL = tempDir.appendingPathComponent("input.mp4")
-        let outputURL = tempDir.appendingPathComponent("output.srt")
+        let outputURL = tempDir.appendingPathComponent("output_srt_\(UUID().uuidString).srt")
         
         // Clean up before test
         try? FileManager.default.removeItem(at: outputURL)
@@ -79,7 +79,7 @@ struct TranscriptionCoordinatorTests {
         
         let tempDir = FileManager.default.temporaryDirectory
         let inputURL = tempDir.appendingPathComponent("input.mp4")
-        let outputURL = tempDir.appendingPathComponent("output.vtt")
+        let outputURL = tempDir.appendingPathComponent("output_vtt_\(UUID().uuidString).vtt")
         
         try? FileManager.default.removeItem(at: outputURL)
         
@@ -112,7 +112,7 @@ struct TranscriptionCoordinatorTests {
         
         let tempDir = FileManager.default.temporaryDirectory
         let inputURL = tempDir.appendingPathComponent("input.mp4")
-        let outputURL = tempDir.appendingPathComponent("output.json")
+        let outputURL = tempDir.appendingPathComponent("output_json_\(UUID().uuidString).json")
         
         try? FileManager.default.removeItem(at: outputURL)
         
@@ -139,7 +139,7 @@ struct TranscriptionCoordinatorTests {
         
         let tempDir = FileManager.default.temporaryDirectory
         let inputURL = tempDir.appendingPathComponent("input.mp4")
-        let outputURL = tempDir.appendingPathComponent("output.srt")
+        let outputURL = tempDir.appendingPathComponent("output_err_\(UUID().uuidString).srt")
         
         await #expect(throws: Error.self) {
             try await coordinator.transcribe(

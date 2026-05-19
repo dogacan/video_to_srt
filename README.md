@@ -37,6 +37,7 @@ HF_TOKEN=your_token swift run --disable-sandbox -c release VideoToSrt --engine q
 | `--format` | `-f` | Subtitle format: `srt`, `vtt`, `txt`, or `json`. | `srt` |
 | `--max-cpl` | | Maximum characters per line for subtitles. | `80` |
 | `--max-duration`| | Maximum segment duration in seconds. | `7.0` |
+| `--min-words` | | Minimum words per segment before splitting on duration. | `3` |
 | `--locale` | | BCP-47 locale identifier (e.g., `en-US`, `fr-FR`). | System Locale |
 | `--ffmpeg-path` | | Path to `ffmpeg` executable for unsupported formats. | - |
 | `--qwen-model` | | Qwen3ASR model repo ID (MLX format). | `aufklarer/Qwen3-ASR-0.6B-MLX-4bit` |

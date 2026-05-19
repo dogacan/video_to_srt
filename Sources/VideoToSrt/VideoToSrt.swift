@@ -41,6 +41,12 @@ struct VideoToSrt: AsyncParsableCommand {
 
     @Option(
         name: .long,
+        help: "The minimum number of words required in a subtitle segment before it can be split due to duration. Default: 3"
+    )
+    var minWords: Int = 3
+
+    @Option(
+        name: .long,
         help: """
               BCP-47 locale identifier for the transcription language (e.g. 'en-US', 'fr-FR').
               Defaults to the system locale when omitted.
@@ -133,7 +139,8 @@ struct VideoToSrt: AsyncParsableCommand {
             subtitleOffsetSeconds: subtitleOffset,
             format: subFormat,
             maxCharactersPerLine: maxCpl,
-            maxSegmentDuration: maxDuration
+            maxSegmentDuration: maxDuration,
+            minWordsPerSegment: minWords
         )
 
         print("Using engine: \(engine)")
