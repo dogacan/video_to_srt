@@ -113,44 +113,59 @@ public final class SubtitleTranslator {
             return result
         }
         
+        var prefixCharSums = [0]
+        prefixCharSums.reserveCapacity(words.count + 1)
+        var sum = 0
+        for word in words {
+            sum += word.count
+            prefixCharSums.append(sum)
+        }
+        
+        func joinedLength(start: Int, end: Int) -> Int {
+            guard end > start else { return 0 }
+            return (prefixCharSums[end] - prefixCharSums[start]) + (end - start - 1)
+        }
+        
         var result: [String] = []
-        var remainingWords = words
+        var wordOffset = 0
         
         for i in 0..<(segments.count - 1) {
             let segment = segments[i]
             let duration = segment.endSeconds - segment.startSeconds
             let ratio = duration / totalDuration
             
-            let totalRemainingChars = remainingWords.joined(separator: " ").count
+            let totalRemainingChars = joinedLength(start: wordOffset, end: words.count)
             let targetLength = Double(totalRemainingChars) * ratio
             
             // Find the number of words that gets us closest to the target character length
             var bestWordCount = 0
             var bestDifference = Double.infinity
+            let remainingWordsCount = words.count - wordOffset
             
-            for k in 0...remainingWords.count {
-                let candidateString = remainingWords[0..<k].joined(separator: " ")
-                let diff = abs(Double(candidateString.count) - targetLength)
+            for k in 0...remainingWordsCount {
+                let length = joinedLength(start: wordOffset, end: wordOffset + k)
+                let diff = abs(Double(length) - targetLength)
                 if diff < bestDifference {
                     bestDifference = diff
                     bestWordCount = k
-                } else if candidateString.count > Int(targetLength) {
+                } else if length > Int(targetLength) {
                     // Difference is increasing, we can stop
                     break
                 }
             }
             
             // Make sure we leave at least one word for the remaining segments if possible
-            let maxAllowedWords = remainingWords.count - (segments.count - 1 - i)
+            let maxAllowedWords = remainingWordsCount - (segments.count - 1 - i)
             let chosenWords = min(max(bestWordCount, 1), max(maxAllowedWords, 0))
             
-            let segmentWords = Array(remainingWords[0..<chosenWords])
+            let segmentWords = Array(words[wordOffset..<(wordOffset + chosenWords)])
             result.append(segmentWords.joined(separator: " "))
-            remainingWords.removeFirst(chosenWords)
+            wordOffset += chosenWords
         }
         
         // Add all remaining words to the last segment
-        result.append(remainingWords.joined(separator: " "))
+        let lastSegmentWords = Array(words[wordOffset..<words.count])
+        result.append(lastSegmentWords.joined(separator: " "))
         
         return result
     }
