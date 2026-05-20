@@ -322,7 +322,6 @@ public struct AudioExtractor {
             }
             
             if let channelData = outputBuffer.floatChannelData {
-                floats.reserveCapacity(floats.count + Int(outputBuffer.frameLength))
                 floats.append(contentsOf: UnsafeBufferPointer(start: channelData[0], count: Int(outputBuffer.frameLength)))
             }
             
