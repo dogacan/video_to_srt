@@ -52,7 +52,7 @@ public class ResultSegmenter: @unchecked Sendable {
         
         let speakerChanged = lastSpeaker != nil && currentSpeaker != nil && currentSpeaker != lastSpeaker
         
-        // 1. Flush before combine if adding this segment would exceed max duration, OR if speaker changed
+        // 1. Flush before combine if adding this segment would exceed max duration
         if let start = currentStart, !currentText.isEmpty {
             let potentialDuration = endSecs - start
             let wordCount = currentText.split(whereSeparator: { $0.isWhitespace }).count
@@ -65,34 +65,30 @@ public class ResultSegmenter: @unchecked Sendable {
             
             let shouldFlushDuration = potentialDuration > maxSegmentDuration && !isTooShortToSplit
             
-            if shouldFlushDuration || speakerChanged {
+            if shouldFlushDuration {
                 if let flushed = flush() {
                     results.append(flushed)
                 }
             }
         }
         
-        // Setup text with speaker prefix if necessary
-        var segmentText = plain
-        if let speaker = currentSpeaker {
-            if lastSpeaker != nil && speaker != lastSpeaker {
-                // Speaker actually changed → prefix with dash
-                segmentText = "- " + segmentText
-            }
-            lastSpeaker = speaker
-        }
-        
         // 2. Accumulate
         if currentText.isEmpty {
-            currentText = segmentText
+            currentText = plain
             currentStart = startSecs
             currentEnd = endSecs
         } else {
-            // Add a newline if speaker changed but we didn't flush (e.g. within a short segment)
-            // Wait, we DO flush if speakerChanged according to step 1!
-            // But just in case, we concatenate with space
-            currentText += " " + segmentText
+            if speakerChanged {
+                // Speaker changed within the same segment -> format with newline and dash
+                currentText += "\n- " + plain
+            } else {
+                currentText += " " + plain
+            }
             currentEnd = endSecs
+        }
+        
+        if let speaker = currentSpeaker {
+            lastSpeaker = speaker
         }
         
         // 3. Flush if now over limit or ends with punctuation

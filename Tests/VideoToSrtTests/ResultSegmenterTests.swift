@@ -163,4 +163,44 @@ struct ResultSegmenterTests {
             Issue.record("Expected final segment to be non-nil")
         }
     }
+
+    @Test func testSpeakerDiarizationFormatting() {
+        let map = DiarizationMap(segments: [
+            SpeakerSegment(start: 0.0, end: 2.0, speaker: "SPEAKER_00"),
+            SpeakerSegment(start: 2.0, end: 4.0, speaker: "SPEAKER_01"),
+            SpeakerSegment(start: 4.0, end: 10.0, speaker: "SPEAKER_00")
+        ])
+        let options = TranscriptionOptions(diarizationMap: map, maxSegmentDuration: 7.0)
+        let segmenter = ResultSegmenter(offset: 0, totalDuration: 100, options: options)
+        
+        // 1. First segment (SPEAKER_00)
+        // Starts empty, should just be "Hello"
+        let res1 = segmenter.process(segment: MockSegment(transcriptionText: "Hello", transcriptionStartTime: 0.0, transcriptionEndTime: 1.0))
+        #expect(res1.isEmpty)
+        
+        // 2. Second segment (SPEAKER_01) - speaker changed but within duration limits, no sentence ending
+        // Should accumulate into the same segment with "\n- "
+        let res2 = segmenter.process(segment: MockSegment(transcriptionText: "world", transcriptionStartTime: 2.0, transcriptionEndTime: 3.0))
+        #expect(res2.isEmpty)
+        
+        // 3. Third segment (SPEAKER_00) - speaker changed again
+        let res3 = segmenter.process(segment: MockSegment(transcriptionText: "!", transcriptionStartTime: 4.0, transcriptionEndTime: 4.1))
+        #expect(res3.count == 1)
+        // Since it was combined, it should be "Hello\n- world\n- !"
+        #expect(res3[0].formattedText.contains("Hello\n- world\n- !"))
+        
+        // Let's test a case where it flushes first (e.g. because of sentence ending)
+        let segmenter2 = ResultSegmenter(offset: 0, totalDuration: 100, options: options)
+        // SPEAKER_00: "Yes." (ends with period -> flushes)
+        let res4 = segmenter2.process(segment: MockSegment(transcriptionText: "Yes.", transcriptionStartTime: 0.0, transcriptionEndTime: 1.0))
+        #expect(res4.count == 1)
+        #expect(res4[0].formattedText.contains("Yes."))
+        #expect(!res4[0].formattedText.contains("- ")) // No dash!
+        
+        // SPEAKER_01: "No." (starts fresh -> should not have dash)
+        let res5 = segmenter2.process(segment: MockSegment(transcriptionText: "No.", transcriptionStartTime: 2.0, transcriptionEndTime: 3.0))
+        #expect(res5.count == 1)
+        #expect(res5[0].formattedText.contains("No."))
+        #expect(!res5[0].formattedText.contains("- ")) // No dash!
+    }
 }
