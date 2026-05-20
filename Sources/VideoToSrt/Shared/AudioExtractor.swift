@@ -73,7 +73,7 @@ public struct AudioExtractor {
         }
 
         let ext = sourceURL.pathExtension.lowercased()
-        if let fallbackURL = try handleUnsupportedFormat(sourceURL, ext: ext, ffmpegPath: ffmpegPath) {
+        if let fallbackURL = try await handleUnsupportedFormat(sourceURL, ext: ext, ffmpegPath: ffmpegPath) {
             ffmpegGeneratedURL = fallbackURL
             inputURL = ffmpegGeneratedURL!
         }
@@ -90,7 +90,7 @@ public struct AudioExtractor {
             // If AVFoundation fails and we haven't tried FFmpeg yet, try one last time.
             if let avError = error as? AVError, avError.code == .fileFormatNotRecognized, ffmpegGeneratedURL == nil {
                 if let ffmpeg = ffmpegPath {
-                    ffmpegGeneratedURL = try runFFmpeg(from: sourceURL, ffmpegPath: ffmpeg, codec: "copy")
+                    ffmpegGeneratedURL = try await runFFmpeg(from: sourceURL, ffmpegPath: ffmpeg, codec: "copy")
                     inputURL = ffmpegGeneratedURL!
                     let fallbackAsset = AVURLAsset(url: inputURL)
                     
@@ -152,7 +152,7 @@ public struct AudioExtractor {
         
         if let ffmpeg = ffmpegPath, ext != "wav" {
             logger.info("Using ffmpeg to extract 16kHz wav audio for diarization...")
-            return try runFFmpegTo16kHzWav(from: sourceURL, ffmpegPath: ffmpeg)
+            return try await runFFmpegTo16kHzWav(from: sourceURL, ffmpegPath: ffmpeg)
         } else if isUnsupportedFormat(ext) {
             throw AudioExtractionError.unsupportedMediaFormat(ext)
         }
@@ -252,7 +252,7 @@ public struct AudioExtractor {
         // Skip this if the input is already a WAV (e.g. from diarization).
         if let ffmpeg = ffmpegPath, ext != "wav" {
             logger.info("Using ffmpeg to extract \(targetSampleRate)Hz mono audio...")
-            ffmpegGeneratedURL = try runFFmpegToWav(from: sourceURL, sampleRate: targetSampleRate, ffmpegPath: ffmpeg)
+            ffmpegGeneratedURL = try await runFFmpegToWav(from: sourceURL, sampleRate: targetSampleRate, ffmpegPath: ffmpeg)
             inputURL = ffmpegGeneratedURL!
         } else if isUnsupportedFormat(ext) {
             throw AudioExtractionError.unsupportedMediaFormat(ext)
@@ -365,68 +365,87 @@ public struct AudioExtractor {
         unsupportedFormats.contains(ext)
     }
 
-    private static func handleUnsupportedFormat(_ sourceURL: URL, ext: String, ffmpegPath: String?) throws -> URL? {
+    private static func handleUnsupportedFormat(_ sourceURL: URL, ext: String, ffmpegPath: String?) async throws -> URL? {
         guard isUnsupportedFormat(ext) else { return nil }
         guard let ffmpeg = ffmpegPath else {
             throw AudioExtractionError.unsupportedMediaFormat(ext)
         }
         try validateFFmpegPath(ffmpeg)
-        return try runFFmpeg(from: sourceURL, ffmpegPath: ffmpeg, codec: "copy")
+        return try await runFFmpeg(from: sourceURL, ffmpegPath: ffmpeg, codec: "copy")
     }
 
-    private static func runFFmpeg(from sourceURL: URL, ffmpegPath: String, codec: String) throws -> URL {
+    private static func runFFmpeg(from sourceURL: URL, ffmpegPath: String, codec: String) async throws -> URL {
         try validateFFmpegPath(ffmpegPath)
         let tempDir = FileManager.default.temporaryDirectory
         let ext = (codec == "copy") ? "mp4" : "m4a"
         let outputURL = tempDir.appendingPathComponent("video_to_srt_\(UUID().uuidString).\(ext)")
 
         let args = ["-nostdin", "-y", "-i", sourceURL.path, "-vn", "-c:a", codec, outputURL.path]
-        return try executeFFmpeg(executablePath: ffmpegPath, arguments: args, outputURL: outputURL)
+        return try await executeFFmpeg(executablePath: ffmpegPath, arguments: args, outputURL: outputURL)
     }
     
-    private static func runFFmpegTo16kHzWav(from sourceURL: URL, ffmpegPath: String) throws -> URL {
-        return try runFFmpegToWav(from: sourceURL, sampleRate: 16000.0, ffmpegPath: ffmpegPath)
+    private static func runFFmpegTo16kHzWav(from sourceURL: URL, ffmpegPath: String) async throws -> URL {
+        return try await runFFmpegToWav(from: sourceURL, sampleRate: 16000.0, ffmpegPath: ffmpegPath)
     }
     
-    private static func runFFmpegToWav(from sourceURL: URL, sampleRate: Double, ffmpegPath: String) throws -> URL {
+    private static func runFFmpegToWav(from sourceURL: URL, sampleRate: Double, ffmpegPath: String) async throws -> URL {
         try validateFFmpegPath(ffmpegPath)
         let tempDir = FileManager.default.temporaryDirectory
         let outputURL = tempDir.appendingPathComponent("video_to_srt_\(UUID().uuidString).wav")
 
         // Convert to target sample rate, 1 channel, 16-bit PCM WAV.
         let args = ["-nostdin", "-y", "-i", sourceURL.path, "-vn", "-ar", "\(Int(sampleRate))", "-ac", "1", "-c:a", "pcm_s16le", outputURL.path]
-        return try executeFFmpeg(executablePath: ffmpegPath, arguments: args, outputURL: outputURL)
+        return try await executeFFmpeg(executablePath: ffmpegPath, arguments: args, outputURL: outputURL)
     }
 
-    private static func executeFFmpeg(executablePath: String, arguments: [String], outputURL: URL) throws -> URL {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: executablePath)
-        process.arguments = arguments
+    private static func executeFFmpeg(executablePath: String, arguments: [String], outputURL: URL) async throws -> URL {
+        class ProcessController: @unchecked Sendable {
+            let process = Process()
+            private let lock = NSLock()
+            private var isCancelled = false
+            private var isLaunched = false
+            
+            func run() throws {
+                lock.lock()
+                guard !isCancelled else {
+                    lock.unlock()
+                    throw CancellationError()
+                }
+                try process.run()
+                isLaunched = true
+                lock.unlock()
+            }
+            
+            func terminate() {
+                lock.lock()
+                isCancelled = true
+                if isLaunched && process.isRunning {
+                    process.terminate()
+                }
+                lock.unlock()
+            }
+        }
+
+        let controller = ProcessController()
+        controller.process.executableURL = URL(fileURLWithPath: executablePath)
+        controller.process.arguments = arguments
 
         let pipe = Pipe()
-        process.standardError = pipe
-        process.standardOutput = pipe
+        controller.process.standardError = pipe
+        controller.process.standardOutput = pipe
 
         logger.debug("Executing: \(([executablePath] + arguments).joined(separator: " "), privacy: .public)")
 
-        try process.run()
-        
-        // Handle cancellation
-        let cancellationTask = Task {
-            while process.isRunning {
-                if Task.isCancelled {
-                    process.terminate()
-                    break
-                }
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s check
-            }
+        let data = try await withTaskCancellationHandler {
+            try controller.run()
+            let readData = (try? pipe.fileHandleForReading.readToEnd()) ?? Data()
+            controller.process.waitUntilExit()
+            return readData
+        } onCancel: {
+            controller.terminate()
         }
-        
-        let data = (try? pipe.fileHandleForReading.readToEnd()) ?? Data()
-        process.waitUntilExit()
-        cancellationTask.cancel()
 
-        if process.terminationStatus == 0 {
+        if controller.process.terminationStatus == 0 {
             return outputURL
         } else {
             if Task.isCancelled {
