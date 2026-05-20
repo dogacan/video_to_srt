@@ -17,6 +17,12 @@ public struct SubtitleSegment: Sendable, Codable {
 
 /// A utility for converting raw transcription timing and text into various subtitle/transcription formats.
 public enum SubtitleFormatter {
+    private static let jsonEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return encoder
+    }()
+
     /// Formats a single subtitle segment based on the requested format.
     ///
     /// - Parameters:
@@ -59,9 +65,7 @@ public enum SubtitleFormatter {
     }
 
     private static func formatJSON(_ segment: SubtitleSegment) -> String {
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        if let data = try? encoder.encode(segment),
+        if let data = try? jsonEncoder.encode(segment),
            let jsonString = String(data: data, encoding: .utf8) {
             return jsonString
         }
