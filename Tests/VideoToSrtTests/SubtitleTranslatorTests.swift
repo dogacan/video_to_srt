@@ -6,8 +6,21 @@ struct SubtitleTranslatorTests {
 
     final class MockTranslationEngine: TranslationEngine {
         func translate(_ texts: [String], sourceLanguageCode: String?, targetLanguageCode: String) async throws -> [String] {
-            // For testing, we mock translation by uppercasing the input sentences.
-            return texts.map { $0.uppercased() }
+            try await translate(texts, sourceLanguageCode: sourceLanguageCode, targetLanguageCode: targetLanguageCode, progressHandler: nil)
+        }
+
+        func translate(
+            _ texts: [String],
+            sourceLanguageCode: String?,
+            targetLanguageCode: String,
+            progressHandler: (@Sendable (Int, Int) -> Void)?
+        ) async throws -> [String] {
+            var results: [String] = []
+            for (index, text) in texts.enumerated() {
+                results.append(text.uppercased())
+                progressHandler?(index + 1, texts.count)
+            }
+            return results
         }
     }
 
@@ -75,4 +88,51 @@ struct SubtitleTranslatorTests {
         #expect(translated[0].text == "FIRST PART")
         #expect(translated[1].text == "SECOND PART AFTER PAUSE")
     }
+
+    @Test func testTranslateWithProgress() async throws {
+        let engine = MockTranslationEngine()
+        let translator = SubtitleTranslator(engine: engine)
+        
+        let segments = [
+            SubtitleSegment(index: 1, text: "I am not going", startSeconds: 0.0, endSeconds: 2.0),
+            SubtitleSegment(index: 2, text: "to school today.", startSeconds: 2.0, endSeconds: 4.5),
+            SubtitleSegment(index: 3, text: "It is closed.", startSeconds: 5.0, endSeconds: 7.0)
+        ]
+        
+        // Use a thread-safe container to store updates.
+        final class ProgressTracker: @unchecked Sendable {
+            private var _updates: [(translated: Int, total: Int)] = []
+            private let lock = NSLock()
+            func record(translated: Int, total: Int) {
+                lock.withLock {
+                    _updates.append((translated, total))
+                }
+            }
+            func getUpdates() -> [(translated: Int, total: Int)] {
+                lock.withLock {
+                    _updates
+                }
+            }
+        }
+        
+        let tracker = ProgressTracker()
+        
+        let _ = try await translator.translate(
+            segments,
+            sourceLanguageCode: "en",
+            targetLanguageCode: "tr",
+            progressHandler: { translated, total in
+                tracker.record(translated: translated, total: total)
+            }
+        )
+        
+        let updates = tracker.getUpdates()
+        
+        #expect(updates.count == 2)
+        #expect(updates[0].translated == 2)
+        #expect(updates[0].total == 3)
+        #expect(updates[1].translated == 3)
+        #expect(updates[1].total == 3)
+    }
 }
+

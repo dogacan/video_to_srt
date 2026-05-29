@@ -108,6 +108,12 @@ extension VideoToSrt {
         )
         var diarize: Bool = false
 
+        @Option(
+            name: .long,
+            help: "Diarization latency shift in seconds (e.g. 0.5 to shift speaker boundaries earlier). Default: 0.5"
+        )
+        var diarizationShift: Double = 0.5
+
         // MARK: - Translation
 
         @Option(
@@ -155,6 +161,7 @@ extension VideoToSrt {
                 locale: locale.map { Locale(identifier: $0) },
                 ffmpegPath: ffmpegPath,
                 subtitleOffsetSeconds: subtitleOffset,
+                diarizationShiftSeconds: diarizationShift,
                 format: subFormat,
                 maxCharactersPerLine: maxCpl,
                 maxSegmentDuration: maxDuration,
@@ -269,8 +276,14 @@ extension VideoToSrt {
             let translatedSegments = try await translator.translate(
                 segments,
                 sourceLanguageCode: sourceLocale ?? Locale.current.identifier,
-                targetLanguageCode: targetLocale
+                targetLanguageCode: targetLocale,
+                progressHandler: { translated, total in
+                    let progressString = "\rProgress: \(translated)/\(total) segments translated..."
+                    fputs(progressString, stderr)
+                    fflush(stderr)
+                }
             )
+            fputs("\n", stderr) // New line after progress
 
             print("Writing translated subtitles to \(outputURL.path)...")
             FileManager.default.createFile(atPath: outputURL.path, contents: nil, attributes: nil)

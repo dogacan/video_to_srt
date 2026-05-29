@@ -43,11 +43,12 @@ public struct TranscriptionCoordinator {
 
 
         if diarize {
-            finalOptions.diarizationMap = try await DiarizationRunner.run(
+            let map = try await DiarizationRunner.run(
                 inputURL: inputURL,
                 ffmpegPath: finalOptions.ffmpegPath,
                 vadModelId: vadModelId
             )
+            finalOptions.diarizationMap = map.shifted(by: finalOptions.diarizationShiftSeconds)
         }
 
         let targetFormat = finalOptions.format
@@ -95,13 +96,22 @@ public struct TranscriptionCoordinator {
         if let targetLang = finalOptions.translateToLanguageCode {
             let segments = try SubtitleParser.parse(accumulatedText)
             if !segments.isEmpty {
+                fputs("Translating \(segments.count) segments to '\(targetLang)'...\n", stderr)
+                fflush(stderr)
+                
                 let translationEngine = AppleTranslationEngine()
                 let translator = SubtitleTranslator(engine: translationEngine)
                 let translatedSegments = try await translator.translate(
                     segments,
                     sourceLanguageCode: finalOptions.locale?.identifier ?? Locale.current.identifier,
-                    targetLanguageCode: targetLang
+                    targetLanguageCode: targetLang,
+                    progressHandler: { translated, total in
+                        let progressString = "\rProgress: \(translated)/\(total) segments translated..."
+                        fputs(progressString, stderr)
+                        fflush(stderr)
+                    }
                 )
+                fputs("\n", stderr) // New line after progress
                 
                 if targetFormat == .vtt {
                     if let data = "WEBVTT\n\n".data(using: String.Encoding.utf8) {

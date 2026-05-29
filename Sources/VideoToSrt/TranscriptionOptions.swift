@@ -34,6 +34,10 @@ public struct TranscriptionOptions: Sendable {
     /// An optional map of speaker segments used to inject speaker tags (e.g. "- Hello") into the SRT.
     public var diarizationMap: DiarizationMap?
 
+    /// The temporal shift in seconds to compensate for diarization lateness.
+    /// A positive value shifts diarization segments earlier in time (e.g. 0.5s).
+    public var diarizationShiftSeconds: Double
+
     // MARK: - Layout & Output Format
 
     /// The desired output format of the subtitles/transcription.
@@ -58,6 +62,7 @@ public struct TranscriptionOptions: Sendable {
         ffmpegPath: String? = nil,
         subtitleOffsetSeconds: Double = 0.0,
         diarizationMap: DiarizationMap? = nil,
+        diarizationShiftSeconds: Double = 0.0,
         format: SubtitleFormat = .srt,
         maxCharactersPerLine: Int = 80,
         maxSegmentDuration: Double = 7.0,
@@ -68,6 +73,7 @@ public struct TranscriptionOptions: Sendable {
         self.ffmpegPath = ffmpegPath
         self.subtitleOffsetSeconds = subtitleOffsetSeconds
         self.diarizationMap = diarizationMap
+        self.diarizationShiftSeconds = diarizationShiftSeconds
         self.format = format
         self.maxCharactersPerLine = maxCharactersPerLine
         self.maxSegmentDuration = maxSegmentDuration

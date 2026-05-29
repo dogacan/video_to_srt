@@ -86,4 +86,19 @@ public struct DiarizationMap: Sendable {
         // Fallback: no diarization segment overlaps this range; use midpoint lookup
         return speaker(at: (rangeStart + rangeEnd) / 2.0)
     }
+    
+    /// Returns a new DiarizationMap where all segments are shifted by the specified offset (in seconds).
+    /// A positive offset shifts segments earlier in time (subtracts from their start and end timestamps),
+    /// which helps compensate for diarization lateness.
+    public func shifted(by offset: Double) -> DiarizationMap {
+        guard offset != 0.0 else { return self }
+        let shiftedSegments = segments.map { segment in
+            SpeakerSegment(
+                start: max(0.0, segment.start - offset),
+                end: max(0.0, segment.end - offset),
+                speaker: segment.speaker
+            )
+        }
+        return DiarizationMap(segments: shiftedSegments)
+    }
 }

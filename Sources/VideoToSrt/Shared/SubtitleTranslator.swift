@@ -9,11 +9,28 @@ public final class SubtitleTranslator {
     }
     
     /// Translates an array of subtitle segments into a target language, keeping timings intact.
-    public func translate(_ segments: [SubtitleSegment], sourceLanguageCode: String?, targetLanguageCode: String) async throws -> [SubtitleSegment] {
+    public func translate(
+        _ segments: [SubtitleSegment],
+        sourceLanguageCode: String?,
+        targetLanguageCode: String,
+        progressHandler: (@Sendable (Int, Int) -> Void)? = nil
+    ) async throws -> [SubtitleSegment] {
         if segments.isEmpty { return [] }
         
         // 1. Group segments into sentences
         let groups = groupSegments(segments)
+        let totalSegments = segments.count
+        
+        // Build cumulative segment counts for progress reporting
+        let cumulativeSegmentCounts: [Int] = {
+            var counts: [Int] = []
+            var runningSum = 0
+            for group in groups {
+                runningSum += group.count
+                counts.append(runningSum)
+            }
+            return counts
+        }()
         
         // 2. Prepare combined texts for translation
         let sentencesToTranslate = groups.map { group in
@@ -22,7 +39,19 @@ public final class SubtitleTranslator {
         }
         
         // 3. Translate sentences
-        let translatedSentences = try await engine.translate(sentencesToTranslate, sourceLanguageCode: sourceLanguageCode, targetLanguageCode: targetLanguageCode)
+        let translatedSentences = try await engine.translate(
+            sentencesToTranslate,
+            sourceLanguageCode: sourceLanguageCode,
+            targetLanguageCode: targetLanguageCode,
+            progressHandler: { translatedSentencesCount, totalSentences in
+                guard let progressHandler = progressHandler else { return }
+                let sentenceIndex = translatedSentencesCount - 1
+                if sentenceIndex >= 0 && sentenceIndex < cumulativeSegmentCounts.count {
+                    let segmentsTranslated = cumulativeSegmentCounts[sentenceIndex]
+                    progressHandler(segmentsTranslated, totalSegments)
+                }
+            }
+        )
         
         // 4. Distribute translated text back into the original segments
         var resultSegments: [SubtitleSegment] = []

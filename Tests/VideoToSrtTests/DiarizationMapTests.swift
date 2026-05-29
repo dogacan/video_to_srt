@@ -52,4 +52,26 @@ struct DiarizationMapTests {
         // 3.0 is 2.0s from both -> >1.0s threshold so nil
         #expect(map.speaker(at: 3.0) == nil)
     }
+    
+    @Test("Correctly shifts speaker segments in time")
+    func shiftsSegments() {
+        let segments = [
+            SpeakerSegment(start: 1.0, end: 2.0, speaker: "SPEAKER_00"),
+            SpeakerSegment(start: 4.0, end: 5.0, speaker: "SPEAKER_01")
+        ]
+        let map = DiarizationMap(segments: segments)
+        
+        // Shift earlier by 0.5s
+        let shiftedMap = map.shifted(by: 0.5)
+        
+        #expect(shiftedMap.segments[0].start == 0.5)
+        #expect(shiftedMap.segments[0].end == 1.5)
+        #expect(shiftedMap.segments[1].start == 3.5)
+        #expect(shiftedMap.segments[1].end == 4.5)
+        
+        // Shift to negative boundaries should clamp to 0.0
+        let doubleShiftedMap = map.shifted(by: 1.5)
+        #expect(doubleShiftedMap.segments[0].start == 0.0)
+        #expect(doubleShiftedMap.segments[0].end == 0.5)
+    }
 }

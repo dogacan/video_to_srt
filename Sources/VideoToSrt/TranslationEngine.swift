@@ -4,12 +4,39 @@ import AppKit
 
 public protocol TranslationEngine: Sendable {
     func translate(_ texts: [String], sourceLanguageCode: String?, targetLanguageCode: String) async throws -> [String]
+    
+    func translate(
+        _ texts: [String],
+        sourceLanguageCode: String?,
+        targetLanguageCode: String,
+        progressHandler: (@Sendable (Int, Int) -> Void)?
+    ) async throws -> [String]
+}
+
+extension TranslationEngine {
+    public func translate(
+        _ texts: [String],
+        sourceLanguageCode: String?,
+        targetLanguageCode: String,
+        progressHandler: (@Sendable (Int, Int) -> Void)?
+    ) async throws -> [String] {
+        try await translate(texts, sourceLanguageCode: sourceLanguageCode, targetLanguageCode: targetLanguageCode)
+    }
 }
 
 public final class AppleTranslationEngine: TranslationEngine, @unchecked Sendable {
     public init() {}
 
     public func translate(_ texts: [String], sourceLanguageCode: String?, targetLanguageCode: String) async throws -> [String] {
+        try await translate(texts, sourceLanguageCode: sourceLanguageCode, targetLanguageCode: targetLanguageCode, progressHandler: nil)
+    }
+
+    public func translate(
+        _ texts: [String],
+        sourceLanguageCode: String?,
+        targetLanguageCode: String,
+        progressHandler: (@Sendable (Int, Int) -> Void)?
+    ) async throws -> [String] {
         if texts.isEmpty { return [] }
         
         return try await withCheckedThrowingContinuation { continuation in
@@ -29,6 +56,7 @@ public final class AppleTranslationEngine: TranslationEngine, @unchecked Sendabl
                 let hostingView = NSHostingView(rootView: HeadlessTranslationView(
                     texts: texts,
                     configuration: configuration,
+                    progressHandler: progressHandler,
                     onComplete: { result in
                         window.close()
                         continuation.resume(with: result)
@@ -45,6 +73,7 @@ public final class AppleTranslationEngine: TranslationEngine, @unchecked Sendabl
 private struct HeadlessTranslationView: View {
     let texts: [String]
     let configuration: TranslationSession.Configuration
+    let progressHandler: (@Sendable (Int, Int) -> Void)?
     let onComplete: @MainActor @Sendable (Result<[String], Error>) -> Void
     
     var body: some View {
@@ -52,13 +81,15 @@ private struct HeadlessTranslationView: View {
             .translationTask(configuration) { session in
                 do {
                     var translatedTexts: [String] = []
-                    for text in texts {
+                    for (index, text) in texts.enumerated() {
                         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             translatedTexts.append(text)
+                            progressHandler?(index + 1, texts.count)
                             continue
                         }
                         let response = try await session.translate(text)
                         translatedTexts.append(response.targetText)
+                        progressHandler?(index + 1, texts.count)
                     }
                     onComplete(.success(translatedTexts))
                 } catch {
