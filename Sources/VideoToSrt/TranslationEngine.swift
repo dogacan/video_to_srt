@@ -78,10 +78,6 @@ private struct HeadlessTranslationView: View {
     
     private let chunkSize = 8
 
-    private struct SendableSession: @unchecked Sendable {
-        let session: TranslationSession
-    }
-    
     var body: some View {
         Color.clear
             .translationTask(configuration) { session in
@@ -92,43 +88,31 @@ private struct HeadlessTranslationView: View {
                     }
                     
                     var results = Array(repeating: "", count: texts.count)
-                    let sendableSession = SendableSession(session: session)
+                    var completedCount = 0
                     
-                    try await withThrowingTaskGroup(of: ([(Int, String)]).self) { group in
-                        for chunk in chunkedTexts {
-                            group.addTask {
-                                var chunkResults: [(Int, String)] = []
-                                var requests: [TranslationSession.Request] = []
-                                var requestIndices: [Int] = []
-                                
-                                for (index, text) in chunk {
-                                    if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                        chunkResults.append((index, text))
-                                    } else {
-                                        requests.append(TranslationSession.Request(sourceText: text))
-                                        requestIndices.append(index)
-                                    }
-                                }
-                                
-                                if !requests.isEmpty {
-                                    let responses = try await sendableSession.session.translations(from: requests)
-                                    for (i, response) in responses.enumerated() {
-                                        chunkResults.append((requestIndices[i], response.targetText))
-                                    }
-                                }
-                                
-                                return chunkResults
+                    for chunk in chunkedTexts {
+                        var requests: [TranslationSession.Request] = []
+                        var requestIndices: [Int] = []
+                        
+                        for (index, text) in chunk {
+                            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                                results[index] = text
+                                completedCount += 1
+                            } else {
+                                requests.append(TranslationSession.Request(sourceText: text))
+                                requestIndices.append(index)
                             }
                         }
                         
-                        var completedCount = 0
-                        for try await chunkResults in group {
-                            for (index, translatedText) in chunkResults {
-                                results[index] = translatedText
+                        if !requests.isEmpty {
+                            let responses = try await session.translations(from: requests)
+                            for (i, response) in responses.enumerated() {
+                                results[requestIndices[i]] = response.targetText
+                                completedCount += 1
                             }
-                            completedCount += chunkResults.count
-                            progressHandler?(completedCount, texts.count)
                         }
+                        
+                        progressHandler?(completedCount, texts.count)
                     }
                     
                     onComplete(.success(results))
