@@ -76,7 +76,7 @@ private struct HeadlessTranslationView: View {
     let progressHandler: (@Sendable (Int, Int) -> Void)?
     let onComplete: @MainActor @Sendable (Result<[String], Error>) -> Void
     
-    private let chunkSize = 64
+    private let chunkSize = 8
 
     private struct SendableSession: @unchecked Sendable {
         let session: TranslationSession
