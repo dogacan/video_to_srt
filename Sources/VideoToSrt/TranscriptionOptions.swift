@@ -55,6 +55,12 @@ public struct TranscriptionOptions: Sendable {
     /// Optional target language code to translate the final subtitles into.
     public var translateToLanguageCode: String?
 
+    /// The translation engine to use: "apple" or "openrouter".
+    public var translationEngine: String
+
+    /// The OpenRouter model to use (e.g. "google/gemma-4-31b-it:free").
+    public var openRouterModel: String
+
     // MARK: - Initialiser
 
     public init(
@@ -67,7 +73,9 @@ public struct TranscriptionOptions: Sendable {
         maxCharactersPerLine: Int = 80,
         maxSegmentDuration: Double = 7.0,
         minWordsPerSegment: Int = 1,
-        translateToLanguageCode: String? = nil
+        translateToLanguageCode: String? = nil,
+        translationEngine: String = "apple",
+        openRouterModel: String = "openrouter/free"
     ) {
         self.locale = locale
         self.ffmpegPath = ffmpegPath
@@ -79,6 +87,8 @@ public struct TranscriptionOptions: Sendable {
         self.maxSegmentDuration = maxSegmentDuration
         self.minWordsPerSegment = minWordsPerSegment
         self.translateToLanguageCode = translateToLanguageCode
+        self.translationEngine = translationEngine
+        self.openRouterModel = openRouterModel
     }
 
     // MARK: - Convenience presets

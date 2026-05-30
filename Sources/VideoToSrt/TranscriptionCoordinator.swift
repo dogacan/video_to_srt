@@ -99,7 +99,12 @@ public struct TranscriptionCoordinator {
                 fputs("Translating \(segments.count) segments to '\(targetLang)'...\n", stderr)
                 fflush(stderr)
                 
-                let translationEngine = AppleTranslationEngine()
+                let translationEngine: any TranslationEngine
+                if finalOptions.translationEngine.lowercased() == "openrouter" {
+                    translationEngine = OpenRouterTranslationEngine(model: finalOptions.openRouterModel)
+                } else {
+                    translationEngine = AppleTranslationEngine()
+                }
                 let translator = SubtitleTranslator(engine: translationEngine)
                 let translatedSegments = try await translator.translate(
                     segments,

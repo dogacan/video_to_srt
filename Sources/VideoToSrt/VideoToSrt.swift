@@ -122,6 +122,18 @@ extension VideoToSrt {
         )
         var translateTo: String?
 
+        @Option(
+            name: .long,
+            help: "The translation engine to use: 'apple' or 'openrouter'. Default: 'apple'"
+        )
+        var translationEngine: String = "apple"
+
+        @Option(
+            name: .long,
+            help: "The OpenRouter model to use for translation. Default: 'openrouter/free'"
+        )
+        var openRouterModel: String = "openrouter/free"
+
         mutating func run() async throws {
             let fileURL = URL(fileURLWithPath: inputPath)
             guard FileManager.default.fileExists(atPath: fileURL.path) else {
@@ -166,7 +178,9 @@ extension VideoToSrt {
                 maxCharactersPerLine: maxCpl,
                 maxSegmentDuration: maxDuration,
                 minWordsPerSegment: minWords,
-                translateToLanguageCode: translateTo
+                translateToLanguageCode: translateTo,
+                translationEngine: translationEngine,
+                openRouterModel: openRouterModel
             )
 
             print("Using engine: \(engine)")
@@ -231,6 +245,12 @@ extension VideoToSrt {
         @Option(name: .shortAndLong, help: "The output format: 'srt', 'vtt', 'txt', or 'json'. Defaults to the input format.")
         var format: String?
 
+        @Option(name: .long, help: "The translation engine to use: 'apple' or 'openrouter'. Default: 'apple'")
+        var translationEngine: String = "apple"
+
+        @Option(name: .long, help: "The OpenRouter model to use for translation. Default: 'openrouter/free'")
+        var openRouterModel: String = "openrouter/free"
+
         mutating func run() async throws {
             let inputURL = URL(fileURLWithPath: input)
             guard FileManager.default.fileExists(atPath: inputURL.path) else {
@@ -271,7 +291,12 @@ extension VideoToSrt {
 
             print("Translating \(segments.count) segments to '\(targetLocale)'...")
 
-            let engine = AppleTranslationEngine()
+            let engine: any TranslationEngine
+            if translationEngine.lowercased() == "openrouter" {
+                engine = OpenRouterTranslationEngine(model: openRouterModel)
+            } else {
+                engine = AppleTranslationEngine()
+            }
             let translator = SubtitleTranslator(engine: engine)
             let translatedSegments = try await translator.translate(
                 segments,
