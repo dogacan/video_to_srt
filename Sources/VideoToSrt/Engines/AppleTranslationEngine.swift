@@ -2,7 +2,7 @@ import Foundation
 @preconcurrency import Translation
 
 public final class AppleTranslationEngine: TranslationEngine, @unchecked Sendable {
-    private let chunkSize = 8
+    private let chunkSize = 16
     
     public init() {}
 

@@ -23,7 +23,7 @@ private struct OpenRouterResponse: Codable {
 public final class OpenRouterTranslationEngine: TranslationEngine, @unchecked Sendable {
     public let model: String
     private let urlString = "https://openrouter.ai/api/v1/chat/completions"
-    private let chunkSize = 8
+    private let chunkSize = 32
     
     public init(model: String = "openrouter/free") {
         self.model = model
