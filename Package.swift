@@ -21,6 +21,7 @@ let package = Package(
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Qwen3ASR", package: "speech-swift"),
                 .product(name: "SpeechVAD", package: "speech-swift"),
+                .product(name: "MADLADTranslation", package: "speech-swift"),
             ]
         ),
         .testTarget(

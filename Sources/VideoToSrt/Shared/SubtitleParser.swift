@@ -4,13 +4,32 @@ public struct SubtitleParser {
     public static func parse(_ content: String) throws -> [SubtitleSegment] {
         let lines = content.replacingOccurrences(of: "\r\n", with: "\n")
             .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
         
         var segments: [SubtitleSegment] = []
         var currentBlock: [String] = []
         
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if trimmed.isEmpty {
+        for (idx, line) in lines.enumerated() {
+            var isNewBlockStart = false
+            if let _ = Int(line) {
+                var lookAheadIdx = idx + 1
+                while lookAheadIdx < lines.count && lines[lookAheadIdx].isEmpty {
+                    lookAheadIdx += 1
+                }
+                if lookAheadIdx < lines.count && lines[lookAheadIdx].contains("-->") {
+                    isNewBlockStart = true
+                }
+            }
+            
+            if isNewBlockStart {
+                if !currentBlock.isEmpty {
+                    if let segment = parseBlock(currentBlock, fallbackIndex: segments.count + 1) {
+                        segments.append(segment)
+                    }
+                    currentBlock.removeAll()
+                }
+                currentBlock.append(line)
+            } else if line.isEmpty {
                 if !currentBlock.isEmpty {
                     if let segment = parseBlock(currentBlock, fallbackIndex: segments.count + 1) {
                         segments.append(segment)
@@ -18,8 +37,7 @@ public struct SubtitleParser {
                     currentBlock.removeAll()
                 }
             } else {
-                // Keep original spacing for text line content, but trim block wrapper lines
-                currentBlock.append(line.trimmingCharacters(in: .newlines))
+                currentBlock.append(line)
             }
         }
         

@@ -1,4 +1,5 @@
 import Foundation
+import MADLADTranslation
 
 /// The central orchestrator for the transcription process.
 ///
@@ -102,6 +103,9 @@ public struct TranscriptionCoordinator {
                 let translationEngine: any TranslationEngine
                 if finalOptions.translationEngine.lowercased() == "openrouter" {
                     translationEngine = OpenRouterTranslationEngine(model: finalOptions.openRouterModel)
+                } else if finalOptions.translationEngine.lowercased() == "madlad" {
+                    let quantization = finalOptions.madladQuantization.lowercased() == "int8" ? MADLADTranslator.Quantization.int8 : MADLADTranslator.Quantization.int4
+                    translationEngine = MADLADTranslationEngine(modelId: finalOptions.madladModel, quantization: quantization)
                 } else {
                     translationEngine = AppleTranslationEngine()
                 }

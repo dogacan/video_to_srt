@@ -55,11 +55,17 @@ public struct TranscriptionOptions: Sendable {
     /// Optional target language code to translate the final subtitles into.
     public var translateToLanguageCode: String?
 
-    /// The translation engine to use: "apple" or "openrouter".
+    /// The translation engine to use: "apple", "openrouter", or "madlad".
     public var translationEngine: String
 
     /// The OpenRouter model to use (e.g. "google/gemma-4-31b-it:free").
     public var openRouterModel: String
+
+    /// The HuggingFace model repo ID for MADLAD translation.
+    public var madladModel: String
+
+    /// The quantization to use: "int4" or "int8".
+    public var madladQuantization: String
 
     // MARK: - Initialiser
 
@@ -75,7 +81,9 @@ public struct TranscriptionOptions: Sendable {
         minWordsPerSegment: Int = 1,
         translateToLanguageCode: String? = nil,
         translationEngine: String = "apple",
-        openRouterModel: String = "openrouter/free"
+        openRouterModel: String = "openrouter/free",
+        madladModel: String = "aufklarer/MADLAD400-3B-MT-MLX",
+        madladQuantization: String = "int4"
     ) {
         self.locale = locale
         self.ffmpegPath = ffmpegPath
@@ -89,6 +97,8 @@ public struct TranscriptionOptions: Sendable {
         self.translateToLanguageCode = translateToLanguageCode
         self.translationEngine = translationEngine
         self.openRouterModel = openRouterModel
+        self.madladModel = madladModel
+        self.madladQuantization = madladQuantization
     }
 
     // MARK: - Convenience presets

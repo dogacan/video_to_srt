@@ -1,5 +1,6 @@
 import Foundation
 import ArgumentParser
+import MADLADTranslation
 
 @main
 struct VideoToSrt: AsyncParsableCommand {
@@ -124,7 +125,7 @@ extension VideoToSrt {
 
         @Option(
             name: .long,
-            help: "The translation engine to use: 'apple' or 'openrouter'. Default: 'apple'"
+            help: "The translation engine to use: 'apple', 'openrouter', or 'madlad'. Default: 'apple'"
         )
         var translationEngine: String = "apple"
 
@@ -133,6 +134,18 @@ extension VideoToSrt {
             help: "The OpenRouter model to use for translation. Default: 'openrouter/free'"
         )
         var openRouterModel: String = "openrouter/free"
+
+        @Option(
+            name: .long,
+            help: "The HuggingFace model repo ID for MADLAD translation (e.g. 'aufklarer/MADLAD400-3B-MT-MLX')."
+        )
+        var madladModel: String = "aufklarer/MADLAD400-3B-MT-MLX"
+
+        @Option(
+            name: .long,
+            help: "Quantization variant for MADLAD: 'int4' or 'int8'. Default: 'int4'"
+        )
+        var madladQuantization: String = "int4"
 
         mutating func run() async throws {
             let fileURL = URL(fileURLWithPath: inputPath)
@@ -180,7 +193,9 @@ extension VideoToSrt {
                 minWordsPerSegment: minWords,
                 translateToLanguageCode: translateTo,
                 translationEngine: translationEngine,
-                openRouterModel: openRouterModel
+                openRouterModel: openRouterModel,
+                madladModel: madladModel,
+                madladQuantization: madladQuantization
             )
 
             print("Using engine: \(engine)")
@@ -245,11 +260,23 @@ extension VideoToSrt {
         @Option(name: .shortAndLong, help: "The output format: 'srt', 'vtt', 'txt', or 'json'. Defaults to the input format.")
         var format: String?
 
-        @Option(name: .long, help: "The translation engine to use: 'apple' or 'openrouter'. Default: 'apple'")
+        @Option(name: .long, help: "The translation engine to use: 'apple', 'openrouter', or 'madlad'. Default: 'apple'")
         var translationEngine: String = "apple"
 
         @Option(name: .long, help: "The OpenRouter model to use for translation. Default: 'openrouter/free'")
         var openRouterModel: String = "openrouter/free"
+
+        @Option(
+            name: .long,
+            help: "The HuggingFace model repo ID for MADLAD translation (e.g. 'aufklarer/MADLAD400-3B-MT-MLX')."
+        )
+        var madladModel: String = "aufklarer/MADLAD400-3B-MT-MLX"
+
+        @Option(
+            name: .long,
+            help: "Quantization variant for MADLAD: 'int4' or 'int8'. Default: 'int4'"
+        )
+        var madladQuantization: String = "int4"
 
         mutating func run() async throws {
             let inputURL = URL(fileURLWithPath: input)
@@ -294,6 +321,9 @@ extension VideoToSrt {
             let engine: any TranslationEngine
             if translationEngine.lowercased() == "openrouter" {
                 engine = OpenRouterTranslationEngine(model: openRouterModel)
+            } else if translationEngine.lowercased() == "madlad" {
+                let quantization = madladQuantization.lowercased() == "int8" ? MADLADTranslator.Quantization.int8 : MADLADTranslator.Quantization.int4
+                engine = MADLADTranslationEngine(modelId: madladModel, quantization: quantization)
             } else {
                 engine = AppleTranslationEngine()
             }
